@@ -1,6 +1,6 @@
 import { defineConfig, mergeConfig } from 'vitest/config'
 
-import viteConfig from './vite.config.js'
+import viteConfig from './vite.config.ts'
 
 export default mergeConfig(
   viteConfig,
@@ -8,6 +8,8 @@ export default mergeConfig(
     test: {
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',
+      pool: 'threads',
+      fileParallelism: false,
     },
   }),
 )
