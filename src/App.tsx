@@ -1,14 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import type { SoundFilterCategory } from '@/audio/types'
 import { CategoryFilterBar } from '@/components/CategoryFilterBar'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
+import { ImmersiveOverlay } from '@/components/ImmersiveOverlay'
 import { MasterControlBar } from '@/components/MasterControlBar'
+import { MoodMatcherDrawer } from '@/components/MoodMatcherDrawer'
 import { PresetsBar } from '@/components/PresetsBar'
+import { SaveMixModal } from '@/components/SaveMixModal'
 import { SoundCard } from '@/components/SoundCard'
+import { WelcomeModal } from '@/components/WelcomeModal'
 import { useSoundMixer } from '@/hooks/useSoundMixer'
 import { I18nProvider } from '@/i18n/context'
 import { useI18n } from '@/i18n/useI18n'
+
+export const LOCAL_STORAGE_KEY_ONBOARDING_SEEN = 'tiselumi:onboarding_seen_v1'
 
 function AppContent() {
   const { t } = useI18n()
@@ -17,20 +23,65 @@ function AppContent() {
     playingSounds,
     trackVolumes,
     masterVolume,
+    isPaused,
     timerMinutesLeft,
     isTimerActive,
     presets,
     toggleSound,
+    togglePlayPause,
     setVolume,
     setMasterVolume,
     stopAll,
     applyPreset,
+    applyTracks,
     startSleepTimer,
     cancelSleepTimer,
   } = useSoundMixer()
 
   const [activeCategory, setActiveCategory] = useState<SoundFilterCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
+  const [isMoodMatcherOpen, setIsMoodMatcherOpen] = useState(false)
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
+  const [isImmersiveOpen, setIsImmersiveOpen] = useState(false)
+
+  // Leave immersive mode automatically when playback stops
+  useEffect(() => {
+    if (isImmersiveOpen && playingSounds.size === 0) {
+      setIsImmersiveOpen(false)
+    }
+  }, [isImmersiveOpen, playingSounds.size])
+
+  // Trigger welcome modal only on first visit
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem(LOCAL_STORAGE_KEY_ONBOARDING_SEEN)
+      if (!seen) {
+        setIsWelcomeOpen(true)
+      }
+    } catch {
+      // Ignore
+    }
+  }, [])
+
+  const handleDismissWelcome = () => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_ONBOARDING_SEEN, 'true')
+    } catch {
+      // Ignore
+    }
+    setIsWelcomeOpen(false)
+  }
+
+  const handleWelcomeTry = () => {
+    handleDismissWelcome()
+    setIsMoodMatcherOpen(true)
+  }
+
+  const handleWelcomeLogin = () => {
+    handleDismissWelcome()
+    setIsSaveModalOpen(true)
+  }
 
   // Calculate category counts
   const categoryCounts = useMemo(() => {
@@ -110,16 +161,22 @@ function AppContent() {
             <span className="hidden rounded-full bg-[#dfe9df] px-3.5 py-1 text-[11px] font-semibold tracking-wider text-[#10231d] uppercase sm:inline-flex">
               {t.header.badge}
             </span>
+            <button
+              type="button"
+              onClick={() => setIsSaveModalOpen(true)}
+              className="rounded-full border border-[#10231d]/15 bg-white/70 px-3.5 py-1 text-xs font-medium text-[#10231d] shadow-xs backdrop-blur-xs transition-colors hover:border-[#10231d]/30 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
+            >
+              {t.header.loginButton}
+            </button>
             <LanguageSwitch />
           </div>
         </div>
 
         {/* Hero Section */}
         <div className="mt-8 sm:mt-10">
-          <h1 className="font-serif text-4xl font-normal tracking-tight text-[#10231d] sm:text-5xl lg:text-6xl">
+          <h1 className="font-serif text-3xl font-normal tracking-tight text-[#10231d] sm:text-4xl lg:text-5xl">
             {t.header.title}
           </h1>
-          <p className="mt-3 max-w-2xl text-base text-[#5f746d] sm:text-lg">{t.header.subtitle}</p>
         </div>
 
         {/* Curated Presets Bar */}
@@ -140,9 +197,11 @@ function AppContent() {
               >
                 {t.soundSection.title}
               </h2>
-              <p className="text-xs text-[#5f746d]">
-                {filteredCatalog.length} {t.soundSection.soundsCount}
-              </p>
+              {(activeCategory !== 'all' || searchQuery.trim() !== '') && (
+                <p className="text-xs text-[#5f746d]">
+                  {filteredCatalog.length} {t.soundSection.soundsCount}
+                </p>
+              )}
             </div>
           </div>
 
@@ -156,7 +215,7 @@ function AppContent() {
 
           {/* Sound Cards Grid */}
           {filteredCatalog.length > 0 ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredCatalog.map((sound) => {
                 const isPlaying = playingSounds.has(sound.id)
                 const volume = trackVolumes[sound.id] ?? 0.5
@@ -201,14 +260,48 @@ function AppContent() {
         playingSounds={playingSounds}
         trackVolumes={trackVolumes}
         masterVolume={masterVolume}
+        isPaused={isPaused}
         timerMinutesLeft={timerMinutesLeft}
         isTimerActive={isTimerActive}
+        onTogglePlayPause={togglePlayPause}
         onMasterVolumeChange={setMasterVolume}
         onTrackVolumeChange={setVolume}
         onToggleSound={toggleSound}
         onStopAll={stopAll}
         onStartTimer={startSleepTimer}
         onCancelTimer={cancelSleepTimer}
+        onOpenSaveModal={() => setIsSaveModalOpen(true)}
+        onOpenImmersive={playingSounds.size > 0 ? () => setIsImmersiveOpen(true) : undefined}
+      />
+
+      {/* Floating Mood Matcher Drawer */}
+      <MoodMatcherDrawer
+        onApplyTracks={applyTracks}
+        onStopAll={stopAll}
+        isOpen={isMoodMatcherOpen}
+        onOpenChange={setIsMoodMatcherOpen}
+      />
+
+      {/* Immersive fullscreen mode */}
+      <ImmersiveOverlay
+        isOpen={isImmersiveOpen}
+        onClose={() => setIsImmersiveOpen(false)}
+        soundIds={[...playingSounds]}
+      />
+
+      {/* Save Mix Freemium Modal */}
+      <SaveMixModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        activeTracksCount={playingSounds.size}
+      />
+
+      {/* First-time Welcome Modal */}
+      <WelcomeModal
+        isOpen={isWelcomeOpen}
+        onTry={handleWelcomeTry}
+        onLogin={handleWelcomeLogin}
+        onClose={handleDismissWelcome}
       />
     </div>
   )

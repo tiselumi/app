@@ -8,6 +8,9 @@ This file defines the working agreement for everyone who changes the Tiselumi ap
 - The current MVP is intentionally client-only. Do not add accounts, a backend, AI generation, analytics, payments, or notifications unless the product scope is explicitly changed.
 - Treat the product as a wellbeing aid, not a medical device. Never promise to diagnose, treat, or cure anxiety, insomnia, or another condition.
 - Favor a quiet, simple experience over feature count. Avoid attention-grabbing patterns, streaks, urgency, and unnecessary notifications.
+- A visitor understands the app within seconds of arriving: one screen offers one obvious next action (pick a mood, press play) with no explanation needed.
+- Keep interfaces uncluttered. No fine print or label noise; reveal detailed controls only at the moment they are needed.
+- If a feature or screen requires instructions to be understood, redesign it or cut it.
 
 ## Required workflow
 

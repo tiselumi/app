@@ -46,3 +46,152 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Immersive fullscreen mode */
+
+@keyframes immersive-breathe {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+.immersive-breathe {
+  animation: immersive-breathe 9s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes immersive-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+  25% {
+    transform: translate(14px, -22px);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-10px, -40px);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(18px, -16px);
+    opacity: 0.8;
+  }
+}
+
+.immersive-particle {
+  will-change: transform, opacity;
+}
+
+@keyframes immersive-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+  25% {
+    transform: translate(14px, -22px);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-10px, -40px);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(18px, -16px);
+    opacity: 0.8;
+  }
+}
+
+.immersive-drift {
+  animation-name: immersive-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Rain: drops fall down the screen and fade before reappearing */
+@keyframes immersive-fall {
+  0% {
+    transform: translateY(-12vh) translateX(0);
+    opacity: 0;
+  }
+  10%,
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(70vh) translateX(-6px);
+    opacity: 0;
+  }
+}
+
+.immersive-fall {
+  animation-name: immersive-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Embers: sparks slowly rise like from a fireplace and fade out high */
+@keyframes immersive-rise {
+  0% {
+    transform: translateY(6vh) translateX(0);
+    opacity: 0;
+  }
+  15%,
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-55vh) translateX(12px);
+    opacity: 0;
+  }
+}
+
+.immersive-rise {
+  animation-name: immersive-rise;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+/* Stars: gentle twinkle in place */
+@keyframes immersive-twinkle {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+
+.immersive-twinkle {
+  animation-name: immersive-twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes immersive-hint {
+  0% {
+    opacity: 0;
+  }
+  15%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.immersive-hint {
+  animation: immersive-hint 6s ease-in-out forwards;
+}

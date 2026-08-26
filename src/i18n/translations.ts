@@ -5,9 +5,8 @@ export const translations: Record<Locale, TranslationSchema> = {
     header: {
       badge: 'Sleep Assistant & Mixer',
       title: 'Quiet your mind. Ease into sleep.',
-      subtitle:
-        'Craft your personal sleep atmosphere by mixing nature soundscapes, cozy ambiances, soothing ASMR, and procedural noise.',
       quickMixes: 'Curated Soundscapes:',
+      loginButton: 'Log In',
     },
     soundSection: {
       title: 'Sound Library',
@@ -36,10 +35,19 @@ export const translations: Record<Locale, TranslationSchema> = {
       soundPlayingSingle: 'sound playing',
       soundPlayingPlural: 'sounds playing',
       masterControl: 'Master control',
-      stopAll: 'Stop all sounds',
+      pauseAll: 'Pause mix',
+      resumeAll: 'Resume mix',
+      pausedStatus: 'paused',
+      stopAll: 'Clear mix',
       masterVolumeAria: 'Master volume',
       manageActive: 'Active mix',
       activeTracksTitle: 'Current active mix',
+      immersiveButton: 'Focus mode',
+    },
+    immersive: {
+      title: 'Immersion',
+      close: 'Exit focus mode',
+      exitHint: 'Tap anywhere to come back',
     },
     sleepTimer: {
       buttonLabel: 'Timer',
@@ -196,6 +204,66 @@ export const translations: Record<Locale, TranslationSchema> = {
         description: 'Gentle page turns with soothing brown noise',
       },
     },
+    moodMatcher: {
+      triggerLabel: 'Mood Matcher',
+      tooltipText: 'Pick your mood to generate an instant sound mix',
+      dismissTooltip: 'Dismiss tooltip',
+      title: 'Match Your Mood',
+      closePanel: 'Close panel',
+      maxSelectedHint: 'Up to 3 moods combined',
+      playMix: 'Play Mix',
+      stopMix: 'Stop',
+      clearSelection: 'Reset',
+      historyTitle: 'Recent Combinations',
+      historyEmpty: 'Your mood selections will appear here',
+      clearHistory: 'Clear history',
+      tags: {
+        insomnia: {
+          label: 'Insomnia',
+        },
+        anxiety: {
+          label: 'Anxiety Relief',
+        },
+        exhaustion: {
+          label: 'Exhaustion',
+        },
+        focus: {
+          label: 'Calm Focus',
+        },
+        'deep-calm': {
+          label: 'Deep Calm',
+        },
+        'night-journey': {
+          label: 'Night Train',
+        },
+      },
+    },
+    saveModal: {
+      saveMixButton: 'Save mix',
+      title: 'Save Custom Soundscapes',
+      subtitle:
+        'In guest mode, you can freely listen and adjust any sounds. Create an account to save your favorite mixes and access them across all your devices.',
+      close: 'Close',
+      featureSync: 'Sync custom presets across all your devices',
+      featureTracksSingle: 'Save your active mix of 1 track',
+      featureTracksPlural: 'Save your active mix of {count} tracks',
+      featureHistory: 'Mood matcher history and personalized combinations',
+      createAccount: 'Create Free Account',
+      login: 'Log In',
+      continueGuest: 'Continue as Guest',
+      guestNotice: 'Guest mode is unlimited for listening and mixing.',
+      comingSoonNotice:
+        'Cloud accounts will be available in the upcoming update. You can continue listening for free with zero limits!',
+    },
+    welcomeModal: {
+      badge: 'Welcome to Tiselumi',
+      title: 'Quiet your mind. Ease into sleep.',
+      subtitle: 'A calm sound mixer to wind down and craft your personal bedtime atmosphere.',
+      tryButton: 'Try as Guest',
+      loginButton: 'Log In to Account',
+      guestNote: 'Free and unlimited. No registration required to mix sounds.',
+      close: 'Close',
+    },
     language: {
       switchAria: 'Select language',
       en: 'English',
@@ -206,9 +274,8 @@ export const translations: Record<Locale, TranslationSchema> = {
     header: {
       badge: 'Помощник для сна и микшер',
       title: 'Успокойте мысли. Погрузитесь в сон.',
-      subtitle:
-        'Создайте идеальную атмосферу для сна, соединяя звуки природы, уютные пространства, мягкий ASMR и процедурные шумы.',
       quickMixes: 'Готовые саундскейпы:',
+      loginButton: 'Войти',
     },
     soundSection: {
       title: 'Библиотека звуков',
@@ -237,10 +304,19 @@ export const translations: Record<Locale, TranslationSchema> = {
       soundPlayingSingle: 'звук играет',
       soundPlayingPlural: 'звука(ов) играют',
       masterControl: 'Главный пульт',
-      stopAll: 'Остановить все звуки',
+      pauseAll: 'Пауза',
+      resumeAll: 'Продолжить',
+      pausedStatus: 'на паузе',
+      stopAll: 'Сбросить микс',
       masterVolumeAria: 'Общая громкость',
       manageActive: 'Активный микс',
       activeTracksTitle: 'Текущий активный микс',
+      immersiveButton: 'Режим погружения',
+    },
+    immersive: {
+      title: 'Погружение',
+      close: 'Выйти из режима погружения',
+      exitHint: 'Нажмите в любом месте, чтобы вернуться',
     },
     sleepTimer: {
       buttonLabel: 'Таймер',
@@ -390,6 +466,66 @@ export const translations: Record<Locale, TranslationSchema> = {
         name: 'Чтение на ночь',
         description: 'Шорох страниц книги в сочетании с коричневым шумом',
       },
+    },
+    moodMatcher: {
+      triggerLabel: 'Подбор под настроение',
+      tooltipText: 'Выберите ваше состояние для мгновенного подбора звуков',
+      dismissTooltip: 'Скрыть подсказку',
+      title: 'Подбор под настроение',
+      closePanel: 'Закрыть панель',
+      maxSelectedHint: 'Объединено до 3 настроений',
+      playMix: 'Слушать микс',
+      stopMix: 'Остановить',
+      clearSelection: 'Сбросить',
+      historyTitle: 'Недавние подборы',
+      historyEmpty: 'Здесь появится история ваших подборов',
+      clearHistory: 'Очистить',
+      tags: {
+        insomnia: {
+          label: 'Бессонница',
+        },
+        anxiety: {
+          label: 'Тревожность',
+        },
+        exhaustion: {
+          label: 'Усталость',
+        },
+        focus: {
+          label: 'Спокойный фокус',
+        },
+        'deep-calm': {
+          label: 'Глубокий покой',
+        },
+        'night-journey': {
+          label: 'Ночной поезд',
+        },
+      },
+    },
+    saveModal: {
+      saveMixButton: 'Сохранить микс',
+      title: 'Сохранение персональных миксов',
+      subtitle:
+        'В гостевом режиме вы можете свободно слушать и настраивать любые звуки. Создайте аккаунт, чтобы сохранять любимые миксы и возвращаться к ним на любых устройствах.',
+      close: 'Закрыть',
+      featureSync: 'Синхронизация пресетов между всеми устройствами',
+      featureTracksSingle: 'Сохранение текущего микса из 1 дорожки',
+      featureTracksPlural: 'Сохранение текущего микса из {count} дорожек',
+      featureHistory: 'История подбора настроений и персональные комбинации',
+      createAccount: 'Создать аккаунт',
+      login: 'Войти',
+      continueGuest: 'Продолжить как гость',
+      guestNotice: 'Гостевой режим не ограничен по времени прослушивания.',
+      comingSoonNotice:
+        'Облачные аккаунты появятся в следующем обновлении. Вы можете продолжать слушать бесплатно без ограничений!',
+    },
+    welcomeModal: {
+      badge: 'Добро пожаловать в Tiselumi',
+      title: 'Успокойте мысли. Погрузитесь в сон.',
+      subtitle: 'Ваше спокойное пространство для отдыха, сна и снятия тревожности.',
+      tryButton: 'Попробовать без регистрации',
+      loginButton: 'Войти в аккаунт',
+      guestNote: 'Бесплатно и без ограничений по времени прослушивания.',
+      close: 'Закрыть',
     },
     language: {
       switchAria: 'Выбор языка',

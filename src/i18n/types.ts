@@ -4,8 +4,8 @@ export interface TranslationSchema {
   header: {
     badge: string
     title: string
-    subtitle: string
     quickMixes: string
+    loginButton: string
   }
   soundSection: {
     title: string
@@ -34,10 +34,19 @@ export interface TranslationSchema {
     soundPlayingSingle: string
     soundPlayingPlural: string
     masterControl: string
+    pauseAll: string
+    resumeAll: string
+    pausedStatus: string
     stopAll: string
     masterVolumeAria: string
     manageActive: string
     activeTracksTitle: string
+    immersiveButton: string
+  }
+  immersive: {
+    title: string
+    close: string
+    exitHint: string
   }
   sleepTimer: {
     buttonLabel: string
@@ -61,6 +70,50 @@ export interface TranslationSchema {
       description: string
     }
   >
+  moodMatcher: {
+    triggerLabel: string
+    tooltipText: string
+    dismissTooltip: string
+    title: string
+    closePanel: string
+    maxSelectedHint: string
+    playMix: string
+    stopMix: string
+    clearSelection: string
+    historyTitle: string
+    historyEmpty: string
+    clearHistory: string
+    tags: Record<
+      string,
+      {
+        label: string
+      }
+    >
+  }
+  saveModal: {
+    saveMixButton: string
+    title: string
+    subtitle: string
+    close: string
+    featureSync: string
+    featureTracksSingle: string
+    featureTracksPlural: string
+    featureHistory: string
+    createAccount: string
+    login: string
+    continueGuest: string
+    guestNotice: string
+    comingSoonNotice: string
+  }
+  welcomeModal: {
+    badge: string
+    title: string
+    subtitle: string
+    tryButton: string
+    loginButton: string
+    guestNote: string
+    close: string
+  }
   language: {
     switchAria: string
     en: string
