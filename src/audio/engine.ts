@@ -166,6 +166,18 @@ export class SoundEngine {
     return this.masterVolume
   }
 
+  public async pauseAll(): Promise<void> {
+    if (this.ctx && this.ctx.state === 'running') {
+      await this.ctx.suspend()
+    }
+  }
+
+  public async resumeAll(): Promise<void> {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      await this.ctx.resume()
+    }
+  }
+
   public stopAll(): void {
     for (const soundId of this.tracks.keys()) {
       this.stopTrack(soundId)

@@ -8,28 +8,36 @@ interface MasterControlBarProps {
   playingSounds: Set<string>
   trackVolumes: Record<string, number>
   masterVolume: number
+  isPaused: boolean
   timerMinutesLeft: number | null
   isTimerActive: boolean
+  onTogglePlayPause: () => void
   onMasterVolumeChange: (vol: number) => void
   onTrackVolumeChange: (soundId: string, vol: number) => void
   onToggleSound: (soundId: string) => void
   onStopAll: () => void
   onStartTimer: (minutes: number) => void
   onCancelTimer: () => void
+  onOpenSaveModal?: () => void
+  onOpenImmersive?: () => void
 }
 
 export function MasterControlBar({
   playingSounds,
   trackVolumes,
   masterVolume,
+  isPaused,
   timerMinutesLeft,
   isTimerActive,
+  onTogglePlayPause,
   onMasterVolumeChange,
   onTrackVolumeChange,
   onToggleSound,
   onStopAll,
   onStartTimer,
   onCancelTimer,
+  onOpenSaveModal,
+  onOpenImmersive,
 }: MasterControlBarProps) {
   const { t } = useI18n()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
@@ -50,16 +58,32 @@ export function MasterControlBar({
       {isDrawerOpen && (
         <div className="animate-in fade-in slide-in-from-bottom-2 mb-3 max-h-72 overflow-y-auto rounded-3xl border border-[#10231d]/10 bg-white/95 p-4 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-[#10231d]/5 pb-3">
-            <span className="text-xs font-semibold text-[#10231d]">
-              {t.masterBar.activeTracksTitle} ({activeCount})
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsDrawerOpen(false)}
-              className="p-1 text-xs text-[#5f746d] hover:text-[#10231d]"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-[#10231d]">
+                {t.masterBar.activeTracksTitle} ({activeCount})
+              </span>
+              {isPaused && (
+                <span className="rounded-full bg-[#f4ece0] px-2 py-0.5 text-[10px] font-medium text-[#8c6b3a]">
+                  {t.masterBar.pausedStatus}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onStopAll}
+                className="text-xs font-medium text-[#8c3a3a] hover:underline"
+              >
+                {t.masterBar.stopAll}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-1 text-xs text-[#5f746d] hover:text-[#10231d]"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="mt-3 space-y-3">
@@ -105,24 +129,81 @@ export function MasterControlBar({
               )
             })}
           </div>
+
+          {onOpenSaveModal && (
+            <div className="mt-4 flex items-center justify-between border-t border-[#10231d]/10 pt-3">
+              <span className="text-[11px] text-[#5f746d]">
+                {activeCount}{' '}
+                {activeCount === 1
+                  ? t.masterBar.soundPlayingSingle
+                  : t.masterBar.soundPlayingPlural}
+              </span>
+              <button
+                type="button"
+                onClick={onOpenSaveModal}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#10231d] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#1a382f]"
+              >
+                <span>💾</span>
+                <span>{t.saveModal.saveMixButton}</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Main Bottom Control Bar */}
-      <div className="rounded-3xl border border-[#10231d]/10 bg-white/95 px-5 py-3.5 shadow-[0_20px_50px_rgba(16,35,29,0.18)] backdrop-blur-xl">
+      <div className="rounded-3xl border border-[#10231d]/10 bg-white/95 px-4 py-3 shadow-[0_20px_50px_rgba(16,35,29,0.18)] backdrop-blur-xl sm:px-5 sm:py-3.5">
         <div className="flex items-center justify-between gap-3 sm:gap-6">
-          {/* Left: Active sounds badge & stop button */}
-          <div className="flex items-center gap-3">
+          {/* Left: Play/Pause button, Clear button & Active sound count */}
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <button
+              type="button"
+              onClick={onTogglePlayPause}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#10231d] text-white shadow-sm transition-all hover:scale-105 hover:bg-[#25453a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
+              aria-label={isPaused ? t.masterBar.resumeAll : t.masterBar.pauseAll}
+              title={isPaused ? t.masterBar.resumeAll : t.masterBar.pauseAll}
+            >
+              {isPaused ? (
+                <svg className="ml-0.5 h-4 w-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M8 5.14v13.72a1 1 0 001.5.86l11-6.86a1 1 0 000-1.72l-11-6.86a1 1 0 00-1.5.86z" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={onStopAll}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#10231d] text-white shadow-sm transition-all hover:scale-105 hover:bg-[#25453a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10231d]/5 text-[#5f746d] transition-all hover:bg-[#10231d]/15 hover:text-[#8c3a3a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
               aria-label={t.masterBar.stopAll}
+              title={t.masterBar.stopAll}
             >
-              <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
-                <rect x="6" y="6" width="12" height="12" rx="2" />
+              <svg className="h-3 w-3 fill-current" viewBox="0 0 24 24">
+                <rect x="5" y="5" width="14" height="14" rx="2" />
               </svg>
             </button>
+
+            {onOpenImmersive && !isPaused && (
+              <button
+                type="button"
+                onClick={onOpenImmersive}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10231d]/5 text-[#5f746d] transition-all hover:bg-[#10231d]/15 hover:text-[#10231d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
+                aria-label={t.masterBar.immersiveButton}
+                title={t.masterBar.immersiveButton}
+              >
+                <svg
+                  className="h-3.5 w-3.5 fill-none stroke-current"
+                  strokeWidth="1.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a7 7 0 0 0 10 10z" />
+                </svg>
+              </button>
+            )}
 
             <div>
               <button
@@ -138,7 +219,13 @@ export function MasterControlBar({
                 </span>
                 <span className="text-[10px] text-[#5f746d]">{isDrawerOpen ? '▲' : '▼'}</span>
               </button>
-              <div className="text-[10px] text-[#5f746d]">{t.masterBar.masterControl}</div>
+              <div className="text-[10px] text-[#5f746d]">
+                {isPaused ? (
+                  <span className="font-medium text-[#8c6b3a]">⏸ {t.masterBar.pausedStatus}</span>
+                ) : (
+                  t.masterBar.masterControl
+                )}
+              </div>
             </div>
           </div>
 

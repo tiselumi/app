@@ -92,6 +92,9 @@ export function useSoundMixer() {
   // Active playing sound IDs
   const [playingSounds, setPlayingSounds] = useState<Set<string>>(new Set())
 
+  // Master pause state (preserves active tracks and volumes without resetting)
+  const [isPaused, setIsPaused] = useState(false)
+
   // Master volume (0 to 1)
   const [masterVolume, setMasterVolumeState] = useState(0.8)
 
@@ -128,6 +131,18 @@ export function useSoundMixer() {
     }
   }, [presets])
 
+  // Toggle master play/pause
+  const togglePlayPause = useCallback(async () => {
+    if (playingSounds.size === 0) return
+    if (isPaused) {
+      await soundEngine.resumeAll()
+      setIsPaused(false)
+    } else {
+      await soundEngine.pauseAll()
+      setIsPaused(true)
+    }
+  }, [isPaused, playingSounds.size])
+
   // Toggle individual sound
   const toggleSound = useCallback(
     async (soundId: string) => {
@@ -137,15 +152,22 @@ export function useSoundMixer() {
         setPlayingSounds((prev) => {
           const next = new Set(prev)
           next.delete(soundId)
+          if (next.size === 0) {
+            setIsPaused(false)
+          }
           return next
         })
       } else {
+        if (isPaused) {
+          await soundEngine.resumeAll()
+          setIsPaused(false)
+        }
         const vol = trackVolumes[soundId] ?? 0.5
         await soundEngine.playTrack(soundId, vol)
         setPlayingSounds((prev) => new Set(prev).add(soundId))
       }
     },
-    [playingSounds, trackVolumes],
+    [isPaused, playingSounds, trackVolumes],
   )
 
   // Set track volume
@@ -162,16 +184,24 @@ export function useSoundMixer() {
     soundEngine.setMasterVolume(clamped)
   }, [])
 
-  // Stop all sounds
+  // Stop all sounds and reset state
   const stopAll = useCallback(() => {
     soundEngine.stopAll()
+    if (isPaused) {
+      void soundEngine.resumeAll()
+    }
+    setIsPaused(false)
     setPlayingSounds(new Set())
-  }, [])
+  }, [isPaused])
 
   // Play a preset
   const applyPreset = useCallback(
     async (preset: Preset) => {
       soundEngine.stopAll()
+      if (isPaused) {
+        await soundEngine.resumeAll()
+        setIsPaused(false)
+      }
       const newPlaying = new Set<string>()
 
       for (const [soundId, vol] of Object.entries(preset.tracks)) {
@@ -184,7 +214,30 @@ export function useSoundMixer() {
 
       setPlayingSounds(newPlaying)
     },
-    [setVolume],
+    [isPaused, setVolume],
+  )
+
+  // Apply raw tracks (e.g. from mood matcher)
+  const applyTracks = useCallback(
+    async (tracks: Record<string, number>) => {
+      soundEngine.stopAll()
+      if (isPaused) {
+        await soundEngine.resumeAll()
+        setIsPaused(false)
+      }
+      const newPlaying = new Set<string>()
+
+      for (const [soundId, vol] of Object.entries(tracks)) {
+        if (vol > 0) {
+          setVolume(soundId, vol)
+          await soundEngine.playTrack(soundId, vol)
+          newPlaying.add(soundId)
+        }
+      }
+
+      setPlayingSounds(newPlaying)
+    },
+    [isPaused, setVolume],
   )
 
   // Sleep Timer countdown & gentle fade-out logic
@@ -249,14 +302,17 @@ export function useSoundMixer() {
     trackVolumes,
     masterVolume,
     isAnyPlaying,
+    isPaused,
     timerMinutesLeft,
     isTimerActive,
     presets,
     toggleSound,
+    togglePlayPause,
     setVolume,
     setMasterVolume,
     stopAll,
     applyPreset,
+    applyTracks,
     saveCurrentPreset,
     deletePreset,
     startSleepTimer,
