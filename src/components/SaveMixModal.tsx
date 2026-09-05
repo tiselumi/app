@@ -5,17 +5,29 @@ import { useI18n } from '@/i18n/useI18n'
 interface SaveMixModalProps {
   isOpen: boolean
   onClose: () => void
+  onSave: (name: string) => boolean
   activeTracksCount: number
+  onOpenLogin: () => void
 }
 
-export function SaveMixModal({ isOpen, onClose, activeTracksCount }: SaveMixModalProps) {
+export function SaveMixModal({
+  isOpen,
+  onClose,
+  activeTracksCount,
+  onSave,
+  onOpenLogin,
+}: SaveMixModalProps) {
   const { t } = useI18n()
+  const [name, setName] = useState('')
+  const [error, setError] = useState(false)
   const [showNotice, setShowNotice] = useState(false)
 
   // Reset notice and handle ESC key
   useEffect(() => {
     if (!isOpen) {
       setShowNotice(false)
+      setName('')
+      setError(false)
       return
     }
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -69,21 +81,47 @@ export function SaveMixModal({ isOpen, onClose, activeTracksCount }: SaveMixModa
           <p className="mt-2 text-sm leading-relaxed text-[#5f746d]">{t.saveModal.subtitle}</p>
         </div>
 
-        {/* Feature Highlights */}
-        <div className="mt-5 space-y-2.5 rounded-2xl border border-[#10231d]/10 bg-white/70 p-4 text-xs text-[#10231d]">
-          <div className="flex items-center gap-2.5">
-            <span>☁️</span>
-            <span>{t.saveModal.featureSync}</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span>🎵</span>
-            <span>{trackFeatureText}</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span>🌙</span>
-            <span>{t.saveModal.featureHistory}</span>
-          </div>
-        </div>
+        <form
+          className="mt-5 space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (onSave(name)) onClose()
+            else setError(true)
+          }}
+        >
+          <p id="local-save-notice" className="text-sm text-[#5f746d]">
+            {t.saveModal.localNotice}
+          </p>
+          <label className="block text-sm" htmlFor="mix-name">
+            {t.saveModal.nameLabel}
+          </label>
+          <input
+            id="mix-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            maxLength={80}
+            required
+            aria-describedby="local-save-notice"
+            className="w-full rounded-xl border border-[#10231d]/20 bg-white p-3 focus-visible:outline-2"
+          />
+          {activeTracksCount === 0 ? (
+            <p className="text-sm">{t.saveModal.emptyMix}</p>
+          ) : (
+            <p className="text-sm">{trackFeatureText}</p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm">
+              {t.saveModal.storageError}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={!name.trim() || activeTracksCount === 0}
+            className="w-full rounded-full bg-[#10231d] py-3 text-sm text-white focus-visible:outline-2 disabled:opacity-40"
+          >
+            {t.saveModal.saveLocal}
+          </button>
+        </form>
 
         {showNotice && (
           <div
@@ -105,7 +143,10 @@ export function SaveMixModal({ isOpen, onClose, activeTracksCount }: SaveMixModa
           </button>
           <button
             type="button"
-            onClick={() => setShowNotice(true)}
+            onClick={() => {
+              onClose()
+              onOpenLogin()
+            }}
             className="flex w-full items-center justify-center rounded-full border border-[#10231d]/20 bg-white/80 py-2.5 text-sm font-medium text-[#10231d] transition-all hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
           >
             {t.saveModal.login}

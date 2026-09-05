@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { App } from './App'
 
@@ -35,14 +35,61 @@ describe('App', () => {
     expect(screen.getByText('Match Your Mood')).toBeInTheDocument()
   })
 
-  it('opens account save modal when clicking Log In in header', () => {
+  it('opens a separate login modal when clicking Log In in header', () => {
     render(<App />)
 
     const loginHeaderBtn = screen.getByRole('button', { name: 'Log In' })
     fireEvent.click(loginHeaderBtn)
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('Save Custom Soundscapes')).toBeInTheDocument()
+    expect(screen.getByText('Log in')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Mix name')).not.toBeInTheDocument()
+  })
+
+  it('saves guest mixes across reloads and deletes them persistently', async () => {
+    const view = render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Deep Calm/i }))
+    await screen.findByRole('button', { name: /Pause mix/i })
+    fireEvent.click(screen.getByRole('button', { name: /sounds? playing/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /Save mix/i }))
+    fireEvent.change(screen.getByLabelText('Mix name'), { target: { value: 'My evening' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save in this browser' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    view.unmount()
+    const reload = render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /✨\s*My evening/ }))
+    expect(await screen.findByRole('button', { name: /Pause mix/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete mix: My evening' }))
+    reload.unmount()
+    render(<App />)
+    expect(screen.queryByText('My evening')).not.toBeInTheDocument()
+  })
+
+  it('keeps the form open when browser storage refuses a save', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Deep Calm/i }))
+    await screen.findByRole('button', { name: /Pause mix/i })
+    fireEvent.click(screen.getByRole('button', { name: /sounds? playing/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /Save mix/i }))
+    fireEvent.change(screen.getByLabelText('Mix name'), { target: { value: 'Unsaved' } })
+    const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota')
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save in this browser' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    write.mockRestore()
+    fireEvent.click(screen.getByRole('button', { name: 'Save in this browser' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('ignores malformed stored presets', () => {
+    localStorage.setItem(
+      'tiselumi:custom_presets_v2',
+      JSON.stringify([null, { id: 'bad', name: 'Broken', tracks: { unknown: 4 } }]),
+    )
+    render(<App />)
+    expect(screen.queryByText('Broken')).not.toBeInTheDocument()
   })
 
   it('filters sounds when selecting a category tab', () => {
@@ -143,7 +190,7 @@ describe('App', () => {
     // Save modal should be visible with EN texts
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('Save Custom Soundscapes')).toBeInTheDocument()
-    expect(screen.getByText('Sync custom presets across all your devices')).toBeInTheDocument()
+    expect(screen.getByText(/Saved only in this browser/)).toBeInTheDocument()
 
     // Click "Continue as Guest"
     const continueBtn = screen.getByRole('button', { name: /Continue as Guest/i })
@@ -180,7 +227,7 @@ describe('App', () => {
     fireEvent.click(saveMixBtn)
 
     expect(screen.getByText('Сохранение персональных миксов')).toBeInTheDocument()
-    expect(screen.getByText('Синхронизация пресетов между всеми устройствами')).toBeInTheDocument()
+    expect(screen.getByText(/миксы сохраняются только в текущем браузере/)).toBeInTheDocument()
   })
 
   it('allows pausing and resuming the active mix without losing selected tracks', async () => {

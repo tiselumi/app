@@ -243,10 +243,17 @@ export const translations: Record<Locale, TranslationSchema> = {
       },
     },
     saveModal: {
+      localNotice:
+        'Saved only in this browser, without registration. Clearing site data or ending a private session may delete your mixes. They will not sync to other devices.',
+      nameLabel: 'Mix name',
+      emptyMix: 'Choose some sounds before saving a mix.',
+      storageError:
+        'Could not save changes. Browser storage may be blocked or full. Please try again.',
+      saveLocal: 'Save in this browser',
+      deleteMix: 'Delete mix',
       saveMixButton: 'Save mix',
       title: 'Save Custom Soundscapes',
-      subtitle:
-        'In guest mode, you can freely listen and adjust any sounds. Create an account to save your favorite mixes and access them across all your devices.',
+      subtitle: 'Name your soundscape to return to it later. No account needed.',
       close: 'Close',
       featureSync: 'Sync custom presets across all your devices',
       featureTracksSingle: 'Save your active mix of 1 track',
@@ -266,6 +273,13 @@ export const translations: Record<Locale, TranslationSchema> = {
       tryButton: 'Try as Guest',
       loginButton: 'Log In to Account',
       guestNote: 'Free and unlimited. No registration required to mix sounds.',
+      close: 'Close',
+    },
+    loginModal: {
+      title: 'Log in',
+      subtitle:
+        'Account access is not available yet. You can keep listening and save mixes in this browser.',
+      continueGuest: 'Continue as Guest',
       close: 'Close',
     },
     language: {
@@ -510,10 +524,18 @@ export const translations: Record<Locale, TranslationSchema> = {
       },
     },
     saveModal: {
+      localNotice:
+        'Без регистрации миксы сохраняются только в текущем браузере. Очистка данных сайта или завершение приватного сеанса могут удалить их. На других устройствах они не появятся.',
+      nameLabel: 'Название микса',
+      emptyMix: 'Выберите звуки перед сохранением микса.',
+      storageError:
+        'Не удалось сохранить изменения. Хранилище браузера может быть недоступно или заполнено. Попробуйте ещё раз.',
+      saveLocal: 'Сохранить в этом браузере',
+      deleteMix: 'Удалить микс',
       saveMixButton: 'Сохранить микс',
       title: 'Сохранение персональных миксов',
       subtitle:
-        'В гостевом режиме вы можете свободно слушать и настраивать любые звуки. Создайте аккаунт, чтобы сохранять любимые миксы и возвращаться к ним на любых устройствах.',
+        'Дайте название своему саундскейпу, чтобы вернуться к нему позже. Аккаунт не нужен.',
       close: 'Закрыть',
       featureSync: 'Синхронизация пресетов между всеми устройствами',
       featureTracksSingle: 'Сохранение текущего микса из 1 дорожки',
@@ -533,6 +555,13 @@ export const translations: Record<Locale, TranslationSchema> = {
       tryButton: 'Попробовать без регистрации',
       loginButton: 'Войти в аккаунт',
       guestNote: 'Бесплатно и без ограничений по времени прослушивания.',
+      close: 'Закрыть',
+    },
+    loginModal: {
+      title: 'Вход в аккаунт',
+      subtitle:
+        'Вход в аккаунт пока недоступен. Вы можете продолжить слушать и сохранять миксы в этом браузере.',
+      continueGuest: 'Продолжить как гость',
       close: 'Закрыть',
     },
     language: {

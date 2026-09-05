@@ -4,6 +4,7 @@ import type { SoundFilterCategory } from '@/audio/types'
 import { CategoryFilterBar } from '@/components/CategoryFilterBar'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { ImmersiveOverlay } from '@/components/ImmersiveOverlay'
+import { LoginModal } from '@/components/LoginModal'
 import { MasterControlBar } from '@/components/MasterControlBar'
 import { MoodMatcherDrawer } from '@/components/MoodMatcherDrawer'
 import { PresetsBar } from '@/components/PresetsBar'
@@ -27,6 +28,8 @@ function AppContent() {
     timerSecondsLeft,
     isTimerActive,
     presets,
+    saveCurrentPreset,
+    deletePreset,
     toggleSound,
     togglePlayPause,
     setVolume,
@@ -41,6 +44,7 @@ function AppContent() {
   const [activeCategory, setActiveCategory] = useState<SoundFilterCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isMoodMatcherOpen, setIsMoodMatcherOpen] = useState(false)
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
   const [isImmersiveOpen, setIsImmersiveOpen] = useState(false)
@@ -80,7 +84,7 @@ function AppContent() {
 
   const handleWelcomeLogin = () => {
     handleDismissWelcome()
-    setIsSaveModalOpen(true)
+    setIsLoginModalOpen(true)
   }
 
   // Calculate category counts
@@ -163,7 +167,7 @@ function AppContent() {
             </span>
             <button
               type="button"
-              onClick={() => setIsSaveModalOpen(true)}
+              onClick={() => setIsLoginModalOpen(true)}
               className="rounded-full border border-[#10231d]/15 bg-white/70 px-3.5 py-1 text-xs font-medium text-[#10231d] shadow-xs backdrop-blur-xs transition-colors hover:border-[#10231d]/30 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
             >
               {t.header.loginButton}
@@ -181,7 +185,11 @@ function AppContent() {
 
         {/* Curated Presets Bar */}
         <div className="mt-7">
-          <PresetsBar presets={presets} onSelectPreset={applyPreset} />
+          <PresetsBar
+            presets={presets}
+            onSelectPreset={applyPreset}
+            onDeletePreset={deletePreset}
+          />
         </div>
       </header>
 
@@ -294,7 +302,11 @@ function AppContent() {
         isOpen={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
         activeTracksCount={playingSounds.size}
+        onSave={saveCurrentPreset}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
       />
+
+      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
 
       {/* First-time Welcome Modal */}
       <WelcomeModal

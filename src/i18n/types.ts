@@ -95,6 +95,12 @@ export interface TranslationSchema {
     >
   }
   saveModal: {
+    localNotice: string
+    nameLabel: string
+    emptyMix: string
+    storageError: string
+    saveLocal: string
+    deleteMix: string
     saveMixButton: string
     title: string
     subtitle: string
@@ -116,6 +122,12 @@ export interface TranslationSchema {
     tryButton: string
     loginButton: string
     guestNote: string
+    close: string
+  }
+  loginModal: {
+    title: string
+    subtitle: string
+    continueGuest: string
     close: string
   }
   language: {
