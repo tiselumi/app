@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { SOUND_CATALOG } from '@/audio/catalog'
 import { soundEngine } from '@/audio/engine'
 import { clearMediaSession, connectMediaSession } from '@/audio/mediaSession'
-import { PRESETS_KEY, readPresets } from '@/audio/presetStorage'
+import { PRESETS_KEY, createPresetId, readPresets } from '@/audio/presetStorage'
 import type { Preset } from '@/audio/types'
 
 const LOCAL_STORAGE_KEY_VOLUMES = 'tiselumi:sound_volumes_v2'
@@ -334,15 +334,14 @@ export function useSoundMixer() {
         activeTracks[soundId] = trackVolumes[soundId] ?? 0.5
       }
 
-      const newPreset: Preset = {
-        id: `preset-${crypto.randomUUID()}`,
-        name: name.trim(),
-        icon,
-        description,
-        tracks: activeTracks,
-      }
-
       try {
+        const newPreset: Preset = {
+          id: createPresetId(),
+          name: name.trim(),
+          icon,
+          description,
+          tracks: activeTracks,
+        }
         const next = [...readPresets(DEFAULT_PRESETS), newPreset]
         localStorage.setItem(PRESETS_KEY, JSON.stringify(next))
         setPresets(next)

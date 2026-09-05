@@ -106,11 +106,11 @@ export function MoodMatcherDrawer({
   return (
     <>
       {/* Floating Trigger Button */}
-      <div className="fixed right-5 bottom-24 z-40 sm:right-8 sm:bottom-28">
+      <div className="fixed right-4 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 sm:right-8 sm:bottom-28">
         {showTooltip && !isOpen && (
           <div
             role="status"
-            className="animate-in fade-in slide-in-from-bottom-2 absolute right-0 bottom-full mb-3 w-64 rounded-2xl border border-[#10231d]/15 bg-white p-3.5 shadow-xl backdrop-blur-md"
+            className="animate-in fade-in slide-in-from-bottom-2 absolute right-0 bottom-full mb-3 hidden w-64 rounded-2xl border border-[#10231d]/15 bg-white p-3.5 shadow-xl backdrop-blur-md sm:block"
           >
             <div className="flex items-start justify-between gap-2">
               <p className="text-xs font-medium text-[#10231d]">{t.moodMatcher.tooltipText}</p>
@@ -135,14 +135,16 @@ export function MoodMatcherDrawer({
           aria-expanded={isOpen}
           aria-controls="mood-matcher-panel"
           aria-label={t.moodMatcher.triggerLabel}
-          className="group flex items-center gap-2.5 rounded-full border border-[#10231d]/15 bg-[#10231d] px-4 py-3 text-sm font-medium text-white shadow-xl transition-all duration-200 hover:scale-105 hover:bg-[#1a382f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d] focus-visible:ring-offset-2"
+          className="group flex h-12 w-12 items-center justify-center rounded-full border border-[#10231d]/15 bg-[#10231d] text-sm font-medium text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-[#1a382f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d] focus-visible:ring-offset-2 sm:h-auto sm:w-auto sm:gap-2.5 sm:px-4 sm:py-3 sm:shadow-xl"
         >
           <span className="text-base transition-transform duration-300 group-hover:rotate-12">
             ✨
           </span>
-          <span className="font-sans font-medium tracking-tight">{t.moodMatcher.triggerLabel}</span>
+          <span className="hidden font-sans font-medium tracking-tight sm:inline">
+            {t.moodMatcher.triggerLabel}
+          </span>
           {selectedMoodIds.length > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#dfe9df] text-xs font-bold text-[#10231d]">
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#dfe9df] text-xs font-bold text-[#10231d] sm:static">
               {selectedMoodIds.length}
             </span>
           )}
@@ -155,7 +157,7 @@ export function MoodMatcherDrawer({
           id="mood-matcher-panel"
           role="region"
           aria-label={t.moodMatcher.title}
-          className="animate-in fade-in slide-in-from-bottom-3 fixed right-4 bottom-24 z-50 w-[calc(100%-2rem)] max-w-md rounded-3xl border border-[#10231d]/15 bg-[#faf8f5]/95 p-5 shadow-2xl backdrop-blur-2xl sm:right-8 sm:bottom-28"
+          className="animate-in fade-in slide-in-from-bottom-3 fixed right-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto rounded-3xl border border-[#10231d]/15 bg-[#faf8f5]/95 p-4 shadow-2xl backdrop-blur-2xl sm:right-8 sm:bottom-28 sm:max-h-[calc(100vh-8rem)] sm:w-[calc(100%-2rem)] sm:p-5"
         >
           {/* Header */}
           <div className="flex items-start justify-between border-b border-[#10231d]/10 pb-3">
@@ -171,14 +173,14 @@ export function MoodMatcherDrawer({
               type="button"
               onClick={() => setIsOpen(false)}
               aria-label={t.moodMatcher.closePanel}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-sm text-[#5f746d] transition-colors hover:bg-[#10231d]/10 hover:text-[#10231d]"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-sm text-[#5f746d] transition-colors hover:bg-[#10231d]/10 hover:text-[#10231d] sm:h-8 sm:w-8"
             >
               ✕
             </button>
           </div>
 
           {/* Tags Grid */}
-          <div className="mt-4 grid grid-cols-3 gap-2.5">
+          <div className="mt-4 grid grid-cols-3 gap-2">
             {MOOD_DEFINITIONS.map((mood) => {
               const isSelected = selectedMoodIds.includes(mood.id)
               const localized = t.moodMatcher.tags[mood.id]
@@ -190,7 +192,7 @@ export function MoodMatcherDrawer({
                   type="button"
                   onClick={() => void handleToggleMood(mood.id)}
                   aria-pressed={isSelected}
-                  className={`relative flex flex-col items-center rounded-2xl p-4 text-center transition-all duration-200 ${
+                  className={`relative flex min-h-20 flex-col items-center justify-center rounded-2xl p-2.5 text-center transition-all duration-200 sm:p-4 ${
                     isSelected
                       ? 'border-2 border-[#10231d] bg-[#10231d] text-white shadow-md'
                       : 'border border-[#10231d]/10 bg-white/80 text-[#10231d] hover:-translate-y-0.5 hover:border-[#10231d]/25 hover:bg-white hover:shadow-sm'

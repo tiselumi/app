@@ -53,8 +53,8 @@ export function MasterControlBar({
   return (
     <aside
       aria-label={t.masterBar.masterControl}
-      className={`fixed bottom-5 left-1/2 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 transition-all duration-300 ${
-        isTimerOpen ? 'z-[60]' : 'z-30'
+      className={`fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 transition-all duration-300 sm:bottom-5 ${
+        isTimerOpen ? 'z-[60]' : isDrawerOpen ? 'z-[45]' : 'z-30'
       }`}
     >
       {/* Expandable Active Mix Drawer */}
@@ -82,7 +82,8 @@ export function MasterControlBar({
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(false)}
-                className="p-1 text-xs text-[#5f746d] hover:text-[#10231d]"
+                aria-label={t.moodMatcher.closePanel}
+                className="flex h-11 w-11 items-center justify-center rounded-full text-xs text-[#5f746d] hover:bg-[#10231d]/10 hover:text-[#10231d] sm:h-8 sm:w-8"
               >
                 ✕
               </button>
@@ -144,7 +145,7 @@ export function MasterControlBar({
               <button
                 type="button"
                 onClick={onOpenSaveModal}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#10231d] px-3.5 py-1.5 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#1a382f]"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[#10231d] px-4 py-2 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#1a382f]"
               >
                 <span>💾</span>
                 <span>{t.saveModal.saveMixButton}</span>
