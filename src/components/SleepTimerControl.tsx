@@ -68,7 +68,7 @@ export function SleepTimerControl({
       <button
         type="button"
         onClick={toggleMenu}
-        className={`flex items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d] ${
+        className={`flex touch-manipulation items-center gap-2 rounded-full px-3.5 py-2 text-xs font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d] ${
           isActive
             ? 'bg-[#10231d] text-white shadow-sm'
             : 'bg-[#e7e3da] text-[#10231d] hover:bg-[#dedad0]'
@@ -103,7 +103,7 @@ export function SleepTimerControl({
                   onCancelTimer()
                   closeMenu()
                 }}
-                className="text-[11px] text-red-600 hover:underline"
+                className="touch-manipulation text-[11px] text-red-600 hover:underline"
               >
                 {t.sleepTimer.turnOff}
               </button>
@@ -119,7 +119,7 @@ export function SleepTimerControl({
                   onStartTimer(mins * 60)
                   closeMenu()
                 }}
-                className={`rounded-lg py-1.5 text-xs font-medium transition-colors ${
+                className={`touch-manipulation rounded-lg py-1.5 text-xs font-medium transition-colors ${
                   isActive && secondsLeft === mins * 60
                     ? 'bg-[#10231d] text-white'
                     : 'bg-[#f4f0e8] text-[#10231d] hover:bg-[#dfe9df]'
@@ -167,7 +167,7 @@ export function SleepTimerControl({
                     onBlur={(event) =>
                       onChange(String(parseDurationPart(event.target.value, maximum)))
                     }
-                    className="mt-1 block w-full rounded-lg border border-[#10231d]/15 bg-[#f4f0e8] px-2 py-1.5 text-center text-xs font-medium text-[#10231d] outline-none focus:border-[#10231d] focus:ring-1 focus:ring-[#10231d]"
+                    className="mt-1 block w-full rounded-lg border border-[#10231d]/15 bg-[#f4f0e8] px-2 py-1.5 text-center text-base font-medium text-[#10231d] outline-none focus:border-[#10231d] focus:ring-1 focus:ring-[#10231d]"
                   />
                 </label>
               ))}
@@ -176,7 +176,7 @@ export function SleepTimerControl({
               type="button"
               onClick={startCustomTimer}
               disabled={durationSeconds === 0}
-              className="mt-3 w-full rounded-lg bg-[#10231d] py-2 text-xs font-medium text-white transition-colors hover:bg-[#25453a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d] disabled:cursor-not-allowed disabled:opacity-40"
+              className="mt-3 w-full touch-manipulation rounded-lg bg-[#10231d] py-2 text-xs font-medium text-white transition-colors hover:bg-[#25453a] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t.sleepTimer.start}
             </button>
