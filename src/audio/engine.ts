@@ -14,6 +14,11 @@ interface ActiveTrack {
 export class SoundEngine {
   private ctx: AudioContext | null = null
   private masterGain: GainNode | null = null
+  private timerGain: GainNode | null = null
+  private audioFocusElement: HTMLAudioElement | null = null
+  private audioFocusSource: MediaElementAudioSourceNode | null = null
+  private audioFocusGain: GainNode | null = null
+  private audioFocusPlayPending = false
   private tracks: Map<string, ActiveTrack> = new Map()
   private isMasterMuted = false
   private masterVolume = 0.8
@@ -27,7 +32,10 @@ export class SoundEngine {
 
       this.masterGain = this.ctx.createGain()
       this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime)
-      this.masterGain.connect(this.ctx.destination)
+      this.timerGain = this.ctx.createGain()
+      this.timerGain.gain.setValueAtTime(1, this.ctx.currentTime)
+      this.masterGain.connect(this.timerGain)
+      this.timerGain.connect(this.ctx.destination)
     }
 
     if (this.ctx.state === 'suspended') {
@@ -35,6 +43,64 @@ export class SoundEngine {
     }
 
     return this.ctx
+  }
+
+  private createMediaElement(audioUrl: string): HTMLAudioElement {
+    const element = document.createElement('audio')
+    element.src = audioUrl
+    element.loop = true
+    element.preload = 'auto'
+    element.setAttribute('playsinline', '')
+    return element
+  }
+
+  private startAudioFocusElement(): void {
+    const ctx = this.getAudioContext()
+
+    if (!this.audioFocusElement) {
+      const element = this.createMediaElement('/sounds/rain-on-window.opus')
+      const source = ctx.createMediaElementSource(element)
+      const gain = ctx.createGain()
+      gain.gain.setValueAtTime(0, ctx.currentTime)
+      source.connect(gain)
+      if (this.masterGain) gain.connect(this.masterGain)
+
+      this.audioFocusElement = element
+      this.audioFocusSource = source
+      this.audioFocusGain = gain
+    }
+
+    if (this.audioFocusElement.paused && !this.audioFocusPlayPending) {
+      this.audioFocusPlayPending = true
+      void this.audioFocusElement.play().then(
+        () => {
+          this.audioFocusPlayPending = false
+        },
+        () => {
+          this.audioFocusPlayPending = false
+          // A later user or system play action will retry the media element.
+        },
+      )
+    }
+  }
+
+  private stopAudioFocusElement(): void {
+    if (!this.audioFocusElement) return
+    this.audioFocusPlayPending = false
+    this.audioFocusElement.pause()
+    try {
+      this.audioFocusElement.currentTime = 0
+    } catch {
+      // The media metadata may not have loaded yet.
+    }
+  }
+
+  private syncAudioFocusElement(): void {
+    if ([...this.tracks.values()].some((track) => track.isPlaying)) {
+      this.startAudioFocusElement()
+    } else {
+      this.stopAudioFocusElement()
+    }
   }
 
   public async initTrack(item: SoundItem): Promise<ActiveTrack> {
@@ -77,6 +143,10 @@ export class SoundEngine {
 
   public async playTrack(soundId: string, volume = 0.6): Promise<void> {
     const ctx = this.getAudioContext()
+    // Chrome for Android grants audio focus and creates a media notification
+    // only when an HTML media element participates in the Web Audio graph.
+    // Start it before awaiting sound loading so the user gesture is preserved.
+    this.startAudioFocusElement()
     let track = this.tracks.get(soundId)
 
     if (!track) {
@@ -85,12 +155,14 @@ export class SoundEngine {
       track = await this.initTrack(item)
     }
 
-    if (!track.buffer) return
+    if (!track.buffer) {
+      this.syncAudioFocusElement()
+      return
+    }
 
     track.targetVolume = volume
 
     if (!track.isPlaying) {
-      // Create new buffer source node
       const source = ctx.createBufferSource()
       source.buffer = track.buffer
       source.loop = true
@@ -123,6 +195,7 @@ export class SoundEngine {
     const sourceToStop = track.sourceNode
     track.sourceNode = null
     track.isPlaying = false
+    this.syncAudioFocusElement()
 
     // Stop after fade
     window.setTimeout(() => {
@@ -166,13 +239,49 @@ export class SoundEngine {
     return this.masterVolume
   }
 
+  /**
+   * Schedule the sleep fade on the audio rendering clock. Unlike page timers,
+   * this automation continues while Android throttles or freezes JavaScript.
+   */
+  public scheduleSleepTimer(durationSeconds: number): void {
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return
+
+    const ctx = this.getAudioContext()
+    if (!this.timerGain) return
+
+    const now = ctx.currentTime
+    const endTime = now + durationSeconds
+    const restoreEndTime = Math.min(now + 0.1, endTime)
+    const fadeDuration = Math.min(30, durationSeconds / 2)
+    const fadeStartTime = Math.max(restoreEndTime, endTime - fadeDuration)
+    const gain = this.timerGain.gain
+
+    gain.cancelScheduledValues(now)
+    gain.setValueAtTime(gain.value, now)
+    gain.linearRampToValueAtTime(1, restoreEndTime)
+    gain.setValueAtTime(1, fadeStartTime)
+    gain.linearRampToValueAtTime(0, endTime)
+  }
+
+  public cancelSleepTimer(): void {
+    if (!this.ctx || !this.timerGain) return
+
+    const now = this.ctx.currentTime
+    const gain = this.timerGain.gain
+    gain.cancelScheduledValues(now)
+    gain.setValueAtTime(gain.value, now)
+    gain.setTargetAtTime(1, now, 0.03)
+  }
+
   public async pauseAll(): Promise<void> {
+    this.audioFocusElement?.pause()
     if (this.ctx && this.ctx.state === 'running') {
       await this.ctx.suspend()
     }
   }
 
   public async resumeAll(): Promise<void> {
+    this.syncAudioFocusElement()
     if (this.ctx && this.ctx.state === 'suspended') {
       await this.ctx.resume()
     }
@@ -186,10 +295,23 @@ export class SoundEngine {
 
   public dispose(): void {
     this.stopAll()
+    this.stopAudioFocusElement()
+    this.audioFocusSource?.disconnect()
+    this.audioFocusGain?.disconnect()
+    this.audioFocusElement?.removeAttribute('src')
+    this.audioFocusElement?.load()
+    this.audioFocusElement = null
+    this.audioFocusSource = null
+    this.audioFocusGain = null
+    this.audioFocusPlayPending = false
+
+    for (const track of this.tracks.values()) track.gainNode.disconnect()
+
     if (this.ctx) {
       void this.ctx.close()
       this.ctx = null
       this.masterGain = null
+      this.timerGain = null
     }
     this.tracks.clear()
   }

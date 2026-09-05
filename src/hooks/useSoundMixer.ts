@@ -200,6 +200,7 @@ export function useSoundMixer() {
 
   // Stop all sounds and reset state
   const stopAll = useCallback(() => {
+    soundEngine.cancelSleepTimer()
     soundEngine.stopAll()
     setIsPaused(false)
     setPlayingSounds(new Set())
@@ -293,11 +294,7 @@ export function useSoundMixer() {
     const updateTimer = () => {
       const secondsLeft = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000))
       if (secondsLeft === 0) {
-        setIsTimerActive(false)
-        setTimerEndsAt(null)
-        setTimerSecondsLeft(null)
-        soundEngine.stopAll()
-        setPlayingSounds(new Set())
+        stopAll()
         return
       }
       setTimerSecondsLeft(secondsLeft)
@@ -307,7 +304,7 @@ export function useSoundMixer() {
     const interval = window.setInterval(updateTimer, 250)
 
     return () => window.clearInterval(interval)
-  }, [isTimerActive, timerEndsAt])
+  }, [isTimerActive, stopAll, timerEndsAt])
 
   const startSleepTimer = useCallback((durationSeconds: number) => {
     const seconds = Math.floor(durationSeconds)
@@ -316,9 +313,11 @@ export function useSoundMixer() {
     setTimerSecondsLeft(seconds)
     setTimerEndsAt(Date.now() + seconds * 1000)
     setIsTimerActive(true)
+    soundEngine.scheduleSleepTimer(seconds)
   }, [])
 
   const cancelSleepTimer = useCallback(() => {
+    soundEngine.cancelSleepTimer()
     setIsTimerActive(false)
     setTimerSecondsLeft(null)
     setTimerEndsAt(null)
