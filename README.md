@@ -6,6 +6,7 @@ Tiselumi is a calm sound mixer for people who need help winding down before slee
 
 - Curated, properly licensed ambient sounds.
 - A simple mixer with independent volume controls.
+- Background playback with system play, pause, and stop controls when supported by the browser.
 - Sleep timer and gentle fade-out.
 - Saved preferences and named soundscapes stored locally in the browser. Guest mixes include selected sounds and their volumes; delete them using the × button beside a saved mix. No data is sent to a server. Mixes remain until deleted or browser site data is cleared; private browsing may discard them at the end of the session.
 - No accounts, backend, AI generation, analytics, or medical claims.
