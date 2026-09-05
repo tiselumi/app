@@ -50,10 +50,14 @@ export interface TranslationSchema {
   }
   sleepTimer: {
     buttonLabel: string
-    minLeft: string
     heading: string
     turnOff: string
     minutesOption: string
+    customDuration: string
+    hours: string
+    minutes: string
+    seconds: string
+    start: string
   }
   sounds: Record<
     string,

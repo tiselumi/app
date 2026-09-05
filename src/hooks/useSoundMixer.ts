@@ -98,8 +98,9 @@ export function useSoundMixer() {
   // Master volume (0 to 1)
   const [masterVolume, setMasterVolumeState] = useState(0.8)
 
-  // Sleep timer in minutes remaining (null if inactive)
-  const [timerMinutesLeft, setTimerMinutesLeft] = useState<number | null>(null)
+  // Sleep timer in seconds remaining (null if inactive).
+  const [timerSecondsLeft, setTimerSecondsLeft] = useState<number | null>(null)
+  const [timerEndsAt, setTimerEndsAt] = useState<number | null>(null)
   const [isTimerActive, setIsTimerActive] = useState(false)
 
   // Presets
@@ -240,34 +241,43 @@ export function useSoundMixer() {
     [isPaused, setVolume],
   )
 
-  // Sleep Timer countdown & gentle fade-out logic
+  // Sleep timer countdown. Deriving the remaining time from its end timestamp
+  // keeps the display correct when the browser temporarily throttles intervals.
   useEffect(() => {
-    if (!isTimerActive || timerMinutesLeft === null) return
+    if (!isTimerActive || timerEndsAt === null) return
 
-    const interval = window.setInterval(() => {
-      setTimerMinutesLeft((prev) => {
-        if (prev === null || prev <= 1) {
-          // Timer finished: Stop all sounds gently
-          setIsTimerActive(false)
-          soundEngine.stopAll()
-          setPlayingSounds(new Set())
-          return null
-        }
-        return prev - 1
-      })
-    }, 60000)
+    const updateTimer = () => {
+      const secondsLeft = Math.max(0, Math.ceil((timerEndsAt - Date.now()) / 1000))
+      if (secondsLeft === 0) {
+        setIsTimerActive(false)
+        setTimerEndsAt(null)
+        setTimerSecondsLeft(null)
+        soundEngine.stopAll()
+        setPlayingSounds(new Set())
+        return
+      }
+      setTimerSecondsLeft(secondsLeft)
+    }
+
+    updateTimer()
+    const interval = window.setInterval(updateTimer, 250)
 
     return () => window.clearInterval(interval)
-  }, [isTimerActive, timerMinutesLeft])
+  }, [isTimerActive, timerEndsAt])
 
-  const startSleepTimer = useCallback((minutes: number) => {
-    setTimerMinutesLeft(minutes)
+  const startSleepTimer = useCallback((durationSeconds: number) => {
+    const seconds = Math.floor(durationSeconds)
+    if (!Number.isFinite(seconds) || seconds <= 0) return
+
+    setTimerSecondsLeft(seconds)
+    setTimerEndsAt(Date.now() + seconds * 1000)
     setIsTimerActive(true)
   }, [])
 
   const cancelSleepTimer = useCallback(() => {
     setIsTimerActive(false)
-    setTimerMinutesLeft(null)
+    setTimerSecondsLeft(null)
+    setTimerEndsAt(null)
   }, [])
 
   const isAnyPlaying = playingSounds.size > 0
@@ -303,7 +313,7 @@ export function useSoundMixer() {
     masterVolume,
     isAnyPlaying,
     isPaused,
-    timerMinutesLeft,
+    timerSecondsLeft,
     isTimerActive,
     presets,
     toggleSound,

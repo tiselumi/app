@@ -9,14 +9,14 @@ interface MasterControlBarProps {
   trackVolumes: Record<string, number>
   masterVolume: number
   isPaused: boolean
-  timerMinutesLeft: number | null
+  timerSecondsLeft: number | null
   isTimerActive: boolean
   onTogglePlayPause: () => void
   onMasterVolumeChange: (vol: number) => void
   onTrackVolumeChange: (soundId: string, vol: number) => void
   onToggleSound: (soundId: string) => void
   onStopAll: () => void
-  onStartTimer: (minutes: number) => void
+  onStartTimer: (durationSeconds: number) => void
   onCancelTimer: () => void
   onOpenSaveModal?: () => void
   onOpenImmersive?: () => void
@@ -27,7 +27,7 @@ export function MasterControlBar({
   trackVolumes,
   masterVolume,
   isPaused,
-  timerMinutesLeft,
+  timerSecondsLeft,
   isTimerActive,
   onTogglePlayPause,
   onMasterVolumeChange,
@@ -41,6 +41,7 @@ export function MasterControlBar({
 }: MasterControlBarProps) {
   const { t } = useI18n()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isTimerOpen, setIsTimerOpen] = useState(false)
 
   const activeCount = playingSounds.size
   if (activeCount === 0) {
@@ -52,7 +53,9 @@ export function MasterControlBar({
   return (
     <aside
       aria-label={t.masterBar.masterControl}
-      className="fixed bottom-5 left-1/2 z-30 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 transition-all duration-300"
+      className={`fixed bottom-5 left-1/2 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 transition-all duration-300 ${
+        isTimerOpen ? 'z-[60]' : 'z-30'
+      }`}
     >
       {/* Expandable Active Mix Drawer */}
       {isDrawerOpen && (
@@ -256,10 +259,11 @@ export function MasterControlBar({
 
           {/* Right: Sleep Timer */}
           <SleepTimerControl
-            minutesLeft={timerMinutesLeft}
+            secondsLeft={timerSecondsLeft}
             isActive={isTimerActive}
             onStartTimer={onStartTimer}
             onCancelTimer={onCancelTimer}
+            onOpenChange={setIsTimerOpen}
           />
         </div>
       </div>

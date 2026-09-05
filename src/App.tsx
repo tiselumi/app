@@ -24,7 +24,7 @@ function AppContent() {
     trackVolumes,
     masterVolume,
     isPaused,
-    timerMinutesLeft,
+    timerSecondsLeft,
     isTimerActive,
     presets,
     toggleSound,
@@ -261,7 +261,7 @@ function AppContent() {
         trackVolumes={trackVolumes}
         masterVolume={masterVolume}
         isPaused={isPaused}
-        timerMinutesLeft={timerMinutesLeft}
+        timerSecondsLeft={timerSecondsLeft}
         isTimerActive={isTimerActive}
         onTogglePlayPause={togglePlayPause}
         onMasterVolumeChange={setMasterVolume}
