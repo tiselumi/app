@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { SOUND_CATALOG } from '@/audio/catalog'
 import { soundEngine } from '@/audio/engine'
+import { PRESETS_KEY, readPresets } from '@/audio/presetStorage'
 import type { Preset } from '@/audio/types'
 
 const LOCAL_STORAGE_KEY_VOLUMES = 'tiselumi:sound_volumes_v2'
-const LOCAL_STORAGE_KEY_PRESETS = 'tiselumi:custom_presets_v2'
 
 export const DEFAULT_PRESETS: Preset[] = [
   {
@@ -106,8 +106,7 @@ export function useSoundMixer() {
   // Presets
   const [presets, setPresets] = useState<Preset[]>(() => {
     try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY_PRESETS)
-      if (saved) return JSON.parse(saved)
+      return readPresets(DEFAULT_PRESETS)
     } catch {
       // Fallback
     }
@@ -123,14 +122,18 @@ export function useSoundMixer() {
     }
   }, [trackVolumes])
 
-  // Save presets on change
   useEffect(() => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY_PRESETS, JSON.stringify(presets))
-    } catch {
-      // Ignore
+    const refresh = (event: StorageEvent) => {
+      if (event.key !== PRESETS_KEY && event.key !== null) return
+      try {
+        setPresets(readPresets(DEFAULT_PRESETS))
+      } catch {
+        /* Keep current mixes */
+      }
     }
-  }, [presets])
+    window.addEventListener('storage', refresh)
+    return () => window.removeEventListener('storage', refresh)
+  }, [])
 
   // Toggle master play/pause
   const togglePlayPause = useCallback(async () => {
@@ -284,26 +287,41 @@ export function useSoundMixer() {
 
   const saveCurrentPreset = useCallback(
     (name: string, description?: string, icon = '✨') => {
+      if (!name.trim() || name.trim().length > 80 || playingSounds.size === 0) return false
       const activeTracks: Record<string, number> = {}
       for (const soundId of playingSounds) {
         activeTracks[soundId] = trackVolumes[soundId] ?? 0.5
       }
 
       const newPreset: Preset = {
-        id: `preset-${Date.now()}`,
-        name,
+        id: `preset-${crypto.randomUUID()}`,
+        name: name.trim(),
         icon,
         description,
         tracks: activeTracks,
       }
 
-      setPresets((prev) => [...prev, newPreset])
+      try {
+        const next = [...readPresets(DEFAULT_PRESETS), newPreset]
+        localStorage.setItem(PRESETS_KEY, JSON.stringify(next))
+        setPresets(next)
+        return true
+      } catch {
+        return false
+      }
     },
     [playingSounds, trackVolumes],
   )
 
   const deletePreset = useCallback((presetId: string) => {
-    setPresets((prev) => prev.filter((p) => p.id !== presetId))
+    try {
+      const next = readPresets(DEFAULT_PRESETS).filter((p) => p.id !== presetId)
+      localStorage.setItem(PRESETS_KEY, JSON.stringify(next))
+      setPresets(next)
+      return true
+    } catch {
+      return false
+    }
   }, [])
 
   return {
