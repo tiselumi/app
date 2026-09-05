@@ -49,7 +49,7 @@ export function SaveMixModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="save-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 [padding-bottom:calc(1rem+env(safe-area-inset-bottom))]"
     >
       {/* Backdrop */}
       <div
@@ -59,7 +59,7 @@ export function SaveMixModal({
       />
 
       {/* Modal Card */}
-      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-md rounded-3xl border border-[#10231d]/15 bg-[#faf8f5] p-6 shadow-2xl sm:p-7">
+      <div className="animate-in fade-in zoom-in-95 relative max-h-[calc(100dvh-2rem-env(safe-area-inset-bottom))] w-full max-w-md overflow-y-auto rounded-3xl border border-[#10231d]/15 bg-[#faf8f5] p-5 shadow-2xl sm:p-7">
         <div className="flex items-start justify-between">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#dfe9df] text-2xl">
             ✨
