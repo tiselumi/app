@@ -34,6 +34,13 @@ class MockAudioContext {
     }
   }
 
+  createMediaElementSource() {
+    return {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    }
+  }
+
   createBuffer(channels: number, length: number, sampleRate: number) {
     return {
       numberOfChannels: channels,
@@ -66,6 +73,19 @@ class MockAudioContext {
 window.AudioContext = MockAudioContext
 // @ts-expect-error Mocking webkitAudioContext in jsdom
 window.webkitAudioContext = MockAudioContext
+
+Object.defineProperty(window.HTMLMediaElement.prototype, 'play', {
+  configurable: true,
+  value: vi.fn().mockResolvedValue(undefined),
+})
+Object.defineProperty(window.HTMLMediaElement.prototype, 'pause', {
+  configurable: true,
+  value: vi.fn(),
+})
+Object.defineProperty(window.HTMLMediaElement.prototype, 'load', {
+  configurable: true,
+  value: vi.fn(),
+})
 
 // Mock fetch for audio files in tests
 globalThis.fetch = vi.fn().mockImplementation(() =>
