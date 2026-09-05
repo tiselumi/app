@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { SOUND_CATALOG } from '@/audio/catalog'
 import { soundEngine } from '@/audio/engine'
+import { clearMediaSession, connectMediaSession } from '@/audio/mediaSession'
 import { PRESETS_KEY, readPresets } from '@/audio/presetStorage'
 import type { Preset } from '@/audio/types'
 
@@ -135,17 +136,26 @@ export function useSoundMixer() {
     return () => window.removeEventListener('storage', refresh)
   }, [])
 
+  const pauseAll = useCallback(async () => {
+    if (playingSounds.size === 0 || isPaused) return
+    await soundEngine.pauseAll()
+    setIsPaused(true)
+  }, [isPaused, playingSounds.size])
+
+  const resumeAll = useCallback(async () => {
+    if (playingSounds.size === 0 || !isPaused) return
+    await soundEngine.resumeAll()
+    setIsPaused(false)
+  }, [isPaused, playingSounds.size])
+
   // Toggle master play/pause
   const togglePlayPause = useCallback(async () => {
-    if (playingSounds.size === 0) return
     if (isPaused) {
-      await soundEngine.resumeAll()
-      setIsPaused(false)
+      await resumeAll()
     } else {
-      await soundEngine.pauseAll()
-      setIsPaused(true)
+      await pauseAll()
     }
-  }, [isPaused, playingSounds.size])
+  }, [isPaused, pauseAll, resumeAll])
 
   // Toggle individual sound
   const toggleSound = useCallback(
@@ -191,12 +201,43 @@ export function useSoundMixer() {
   // Stop all sounds and reset state
   const stopAll = useCallback(() => {
     soundEngine.stopAll()
-    if (isPaused) {
-      void soundEngine.resumeAll()
-    }
     setIsPaused(false)
     setPlayingSounds(new Set())
-  }, [isPaused])
+    setIsTimerActive(false)
+    setTimerSecondsLeft(null)
+    setTimerEndsAt(null)
+  }, [])
+
+  // Keep playback controllable from lock screens, notification areas, headsets,
+  // and hardware media keys. Returning to the foreground also recovers audio
+  // contexts that a mobile browser interrupted while the page was hidden.
+  useEffect(() => {
+    if (playingSounds.size === 0) {
+      clearMediaSession()
+      return
+    }
+
+    const disconnect = connectMediaSession(playingSounds, isPaused, {
+      onPlay: () => void soundEngine.resumeAll().then(() => setIsPaused(false)),
+      onPause: () => void soundEngine.pauseAll().then(() => setIsPaused(true)),
+      onStop: stopAll,
+    })
+
+    const recoverPlayback = () => {
+      if (!document.hidden && !isPaused) {
+        void soundEngine.resumeAll()
+      }
+    }
+
+    document.addEventListener('visibilitychange', recoverPlayback)
+    window.addEventListener('pageshow', recoverPlayback)
+
+    return () => {
+      disconnect()
+      document.removeEventListener('visibilitychange', recoverPlayback)
+      window.removeEventListener('pageshow', recoverPlayback)
+    }
+  }, [isPaused, playingSounds, stopAll])
 
   // Play a preset
   const applyPreset = useCallback(
