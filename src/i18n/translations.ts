@@ -51,10 +51,14 @@ export const translations: Record<Locale, TranslationSchema> = {
     },
     sleepTimer: {
       buttonLabel: 'Timer',
-      minLeft: 'min left',
       heading: 'Sleep Timer',
       turnOff: 'Turn off',
       minutesOption: 'min',
+      customDuration: 'Set a duration',
+      hours: 'Hours',
+      minutes: 'Minutes',
+      seconds: 'Seconds',
+      start: 'Start timer',
     },
     sounds: {
       'rain-on-window': {
@@ -320,10 +324,14 @@ export const translations: Record<Locale, TranslationSchema> = {
     },
     sleepTimer: {
       buttonLabel: 'Таймер',
-      minLeft: 'мин осталось',
       heading: 'Таймер сна',
       turnOff: 'Выключить',
       minutesOption: 'мин',
+      customDuration: 'Указать время',
+      hours: 'Часы',
+      minutes: 'Минуты',
+      seconds: 'Секунды',
+      start: 'Запустить таймер',
     },
     sounds: {
       'rain-on-window': {
