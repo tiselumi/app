@@ -43,6 +43,11 @@ export const translations: Record<Locale, TranslationSchema> = {
       manageActive: 'Active mix',
       activeTracksTitle: 'Current active mix',
       immersiveButton: 'Focus mode',
+      foreground: 'Foreground',
+      background: 'Background',
+      soundRole: 'sound role',
+      roleHint:
+        'Foreground sounds feel close and clear. Background sounds feel softer and farther away.',
     },
     immersive: {
       title: 'Immersion',
@@ -330,6 +335,10 @@ export const translations: Record<Locale, TranslationSchema> = {
       manageActive: 'Активный микс',
       activeTracksTitle: 'Текущий активный микс',
       immersiveButton: 'Режим погружения',
+      foreground: 'Передний план',
+      background: 'Фон',
+      soundRole: 'роль звука',
+      roleHint: 'Звук на переднем плане близкий и ясный. Фоновый звук мягче и ощущается дальше.',
     },
     immersive: {
       title: 'Погружение',

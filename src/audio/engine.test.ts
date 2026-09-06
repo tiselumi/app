@@ -37,6 +37,39 @@ describe('SoundEngine background playback', () => {
     engine.dispose()
   })
 
+  it('routes background sounds through a low-pass filter and subtle reverb', async () => {
+    const createFilter = vi.spyOn(AudioContext.prototype, 'createBiquadFilter')
+    const createConvolver = vi.spyOn(AudioContext.prototype, 'createConvolver')
+    const createGain = vi.spyOn(AudioContext.prototype, 'createGain')
+    const engine = new SoundEngine()
+
+    await engine.playTrack('rain-on-window', 0.3, 'background')
+
+    const filter = createFilter.mock.results[0]?.value
+    const reverbGain = createGain.mock.results.at(5)?.value
+    expect(createConvolver).toHaveBeenCalledOnce()
+    expect(filter?.frequency.setTargetAtTime).toHaveBeenCalledWith(6000, 0, 0.18)
+    expect(reverbGain?.gain.setTargetAtTime).toHaveBeenCalledWith(0.09, 0, 0.18)
+
+    engine.dispose()
+  })
+
+  it('smoothly removes background processing when a sound becomes foreground', async () => {
+    const createFilter = vi.spyOn(AudioContext.prototype, 'createBiquadFilter')
+    const createGain = vi.spyOn(AudioContext.prototype, 'createGain')
+    const engine = new SoundEngine()
+
+    await engine.playTrack('rain-on-window', 0.3, 'background')
+    engine.setTrackRole('rain-on-window', 'foreground')
+
+    const filter = createFilter.mock.results[0]?.value
+    const reverbGain = createGain.mock.results.at(5)?.value
+    expect(filter?.frequency.setTargetAtTime).toHaveBeenLastCalledWith(20000, 0, 0.18)
+    expect(reverbGain?.gain.setTargetAtTime).toHaveBeenLastCalledWith(0, 0, 0.18)
+
+    engine.dispose()
+  })
+
   it('schedules and cancels the sleep fade on the audio clock', () => {
     const createGain = vi.spyOn(AudioContext.prototype, 'createGain')
     const engine = new SoundEngine()
