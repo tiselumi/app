@@ -42,6 +42,10 @@ export interface TranslationSchema {
     manageActive: string
     activeTracksTitle: string
     immersiveButton: string
+    foreground: string
+    background: string
+    soundRole: string
+    roleHint: string
   }
   immersive: {
     title: string

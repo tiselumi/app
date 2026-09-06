@@ -23,6 +23,7 @@ function AppContent() {
     catalog,
     playingSounds,
     trackVolumes,
+    trackRoles,
     masterVolume,
     isPaused,
     timerSecondsLeft,
@@ -33,6 +34,7 @@ function AppContent() {
     toggleSound,
     togglePlayPause,
     setVolume,
+    setRole,
     setMasterVolume,
     stopAll,
     applyPreset,
@@ -267,6 +269,7 @@ function AppContent() {
       <MasterControlBar
         playingSounds={playingSounds}
         trackVolumes={trackVolumes}
+        trackRoles={trackRoles}
         masterVolume={masterVolume}
         isPaused={isPaused}
         timerSecondsLeft={timerSecondsLeft}
@@ -274,6 +277,7 @@ function AppContent() {
         onTogglePlayPause={togglePlayPause}
         onMasterVolumeChange={setMasterVolume}
         onTrackVolumeChange={setVolume}
+        onTrackRoleChange={setRole}
         onToggleSound={toggleSound}
         onStopAll={stopAll}
         onStartTimer={startSleepTimer}

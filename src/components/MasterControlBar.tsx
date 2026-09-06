@@ -1,12 +1,14 @@
 import { useState } from 'react'
 
 import { SOUND_CATALOG } from '@/audio/catalog'
+import type { SoundRole } from '@/audio/types'
 import { useI18n } from '@/i18n/useI18n'
 import { SleepTimerControl } from './SleepTimerControl'
 
 interface MasterControlBarProps {
   playingSounds: Set<string>
   trackVolumes: Record<string, number>
+  trackRoles: Record<string, SoundRole>
   masterVolume: number
   isPaused: boolean
   timerSecondsLeft: number | null
@@ -14,6 +16,7 @@ interface MasterControlBarProps {
   onTogglePlayPause: () => void
   onMasterVolumeChange: (vol: number) => void
   onTrackVolumeChange: (soundId: string, vol: number) => void
+  onTrackRoleChange: (soundId: string, role: SoundRole) => void
   onToggleSound: (soundId: string) => void
   onStopAll: () => void
   onStartTimer: (durationSeconds: number) => void
@@ -25,6 +28,7 @@ interface MasterControlBarProps {
 export function MasterControlBar({
   playingSounds,
   trackVolumes,
+  trackRoles,
   masterVolume,
   isPaused,
   timerSecondsLeft,
@@ -32,6 +36,7 @@ export function MasterControlBar({
   onTogglePlayPause,
   onMasterVolumeChange,
   onTrackVolumeChange,
+  onTrackRoleChange,
   onToggleSound,
   onStopAll,
   onStartTimer,
@@ -90,23 +95,49 @@ export function MasterControlBar({
             </div>
           </div>
 
+          <p className="mt-3 text-[11px] leading-relaxed text-[#5f746d]">{t.masterBar.roleHint}</p>
+
           <div className="mt-3 space-y-3">
             {activeTracks.map((track) => {
               const localizedSound = t.sounds[track.id]
               const title = localizedSound?.title ?? track.title
               const vol = trackVolumes[track.id] ?? 0.5
+              const role = trackRoles[track.id] ?? 'background'
 
               return (
                 <div
                   key={track.id}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-[#f4f0e8]/70 p-2.5"
+                  className="flex flex-col gap-3 rounded-xl bg-[#f4f0e8]/70 p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <span className="shrink-0 text-xl">{track.icon}</span>
                     <span className="truncate text-xs font-medium text-[#10231d]">{title}</span>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
+                    <div
+                      role="group"
+                      aria-label={`${title} ${t.masterBar.soundRole}`}
+                      className="flex rounded-full bg-white p-0.5 shadow-xs"
+                    >
+                      {(['foreground', 'background'] as const).map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => onTrackRoleChange(track.id, option)}
+                          aria-pressed={role === option}
+                          className={`min-h-8 rounded-full px-2.5 text-[10px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#10231d] ${
+                            role === option
+                              ? 'bg-[#10231d] text-white'
+                              : 'text-[#5f746d] hover:text-[#10231d]'
+                          }`}
+                        >
+                          {option === 'foreground'
+                            ? t.masterBar.foreground
+                            : t.masterBar.background}
+                        </button>
+                      ))}
+                    </div>
                     <input
                       type="range"
                       min="0"
@@ -114,7 +145,7 @@ export function MasterControlBar({
                       step="0.01"
                       value={vol}
                       onChange={(e) => onTrackVolumeChange(track.id, parseFloat(e.target.value))}
-                      aria-label={`${title} volume`}
+                      aria-label={`${title} ${t.soundCard.volumeAria}`}
                       className="h-1.5 w-24 cursor-pointer appearance-none rounded-lg bg-[#dedad0] accent-[#10231d] sm:w-32"
                     />
                     <span className="w-8 text-right font-mono text-[11px] text-[#5f746d]">
