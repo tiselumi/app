@@ -34,6 +34,34 @@ class MockAudioContext {
     }
   }
 
+  createBiquadFilter() {
+    return {
+      type: 'lowpass',
+      frequency: {
+        value: 20000,
+        setValueAtTime: vi.fn(),
+        setTargetAtTime: vi.fn(),
+        cancelScheduledValues: vi.fn(),
+      },
+      Q: {
+        value: 1,
+        setValueAtTime: vi.fn(),
+        setTargetAtTime: vi.fn(),
+        cancelScheduledValues: vi.fn(),
+      },
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    }
+  }
+
+  createConvolver() {
+    return {
+      buffer: null,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+    }
+  }
+
   createMediaElementSource() {
     return {
       connect: vi.fn(),

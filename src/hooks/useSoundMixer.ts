@@ -4,9 +4,10 @@ import { SOUND_CATALOG } from '@/audio/catalog'
 import { soundEngine } from '@/audio/engine'
 import { clearMediaSession, connectMediaSession } from '@/audio/mediaSession'
 import { PRESETS_KEY, createPresetId, readPresets } from '@/audio/presetStorage'
-import type { Preset } from '@/audio/types'
+import type { Preset, PresetTrack, SoundRole } from '@/audio/types'
 
 const LOCAL_STORAGE_KEY_VOLUMES = 'tiselumi:sound_volumes_v2'
+const DEFAULT_BACKGROUND_VOLUME = 0.3
 
 export const DEFAULT_PRESETS: Preset[] = [
   {
@@ -15,8 +16,8 @@ export const DEFAULT_PRESETS: Preset[] = [
     icon: '🧘',
     description: 'Warm Brown Noise and soft rain for grounding anxiety',
     tracks: {
-      'brown-noise': 0.65,
-      'rain-on-window': 0.45,
+      'brown-noise': { volume: 0.65, role: 'foreground' },
+      'rain-on-window': { volume: 0.3, role: 'background' },
     },
   },
   {
@@ -25,9 +26,9 @@ export const DEFAULT_PRESETS: Preset[] = [
     icon: '🚂',
     description: 'Cozy train cabin sway with rhythmic tracks and rain',
     tracks: {
-      'train-cabin-interior': 0.55,
-      'train-rail-clatter': 0.35,
-      'rain-on-window': 0.3,
+      'train-cabin-interior': { volume: 0.55, role: 'foreground' },
+      'train-rail-clatter': { volume: 0.3, role: 'background' },
+      'rain-on-window': { volume: 0.25, role: 'background' },
     },
   },
   {
@@ -36,9 +37,9 @@ export const DEFAULT_PRESETS: Preset[] = [
     icon: '🌊',
     description: 'Rolling ocean waves and morning coastal breeze',
     tracks: {
-      'ocean-waves-gentle': 0.6,
-      'ocean-waves-foam': 0.35,
-      'ocean-waves-birds': 0.25,
+      'ocean-waves-gentle': { volume: 0.6, role: 'foreground' },
+      'ocean-waves-foam': { volume: 0.3, role: 'background' },
+      'ocean-waves-birds': { volume: 0.22, role: 'background' },
     },
   },
   {
@@ -47,9 +48,9 @@ export const DEFAULT_PRESETS: Preset[] = [
     icon: '🌲',
     description: 'Babbling woodland brook with night meadow crickets',
     tracks: {
-      'forest-brook-gentle': 0.55,
-      'night-crickets-calm': 0.4,
-      'pink-noise': 0.25,
+      'forest-brook-gentle': { volume: 0.55, role: 'foreground' },
+      'night-crickets-calm': { volume: 0.3, role: 'background' },
+      'pink-noise': { volume: 0.22, role: 'background' },
     },
   },
   {
@@ -58,8 +59,8 @@ export const DEFAULT_PRESETS: Preset[] = [
     icon: '☕',
     description: 'Warm cafe atmosphere sheltered from rain',
     tracks: {
-      'coffee-shop-ambience': 0.5,
-      'rain-under-umbrella': 0.4,
+      'coffee-shop-ambience': { volume: 0.5, role: 'foreground' },
+      'rain-under-umbrella': { volume: 0.3, role: 'background' },
     },
   },
   {
@@ -68,8 +69,8 @@ export const DEFAULT_PRESETS: Preset[] = [
     icon: '📖',
     description: 'Gentle page turns with soothing brown noise',
     tracks: {
-      'book-pages-turning': 0.6,
-      'brown-noise': 0.45,
+      'book-pages-turning': { volume: 0.6, role: 'foreground' },
+      'brown-noise': { volume: 0.3, role: 'background' },
     },
   },
 ]
@@ -92,6 +93,7 @@ export function useSoundMixer() {
 
   // Active playing sound IDs
   const [playingSounds, setPlayingSounds] = useState<Set<string>>(new Set())
+  const [trackRoles, setTrackRoles] = useState<Record<string, SoundRole>>({})
 
   // Master pause state (preserves active tracks and volumes without resetting)
   const [isPaused, setIsPaused] = useState(false)
@@ -163,25 +165,37 @@ export function useSoundMixer() {
       const isCurrentlyPlaying = playingSounds.has(soundId)
       if (isCurrentlyPlaying) {
         soundEngine.stopTrack(soundId)
-        setPlayingSounds((prev) => {
-          const next = new Set(prev)
-          next.delete(soundId)
-          if (next.size === 0) {
-            setIsPaused(false)
+        const nextPlaying = new Set(playingSounds)
+        nextPlaying.delete(soundId)
+        const nextRoles = { ...trackRoles }
+        const removedRole = nextRoles[soundId]
+        delete nextRoles[soundId]
+        if (removedRole === 'foreground') {
+          const replacementId = nextPlaying.values().next().value as string | undefined
+          if (replacementId) {
+            nextRoles[replacementId] = 'foreground'
+            soundEngine.setTrackRole(replacementId, 'foreground')
           }
-          return next
-        })
+        }
+        setTrackRoles(nextRoles)
+        setPlayingSounds(nextPlaying)
+        if (nextPlaying.size === 0) setIsPaused(false)
       } else {
         if (isPaused) {
           await soundEngine.resumeAll()
           setIsPaused(false)
         }
-        const vol = trackVolumes[soundId] ?? 0.5
-        await soundEngine.playTrack(soundId, vol)
+        const role: SoundRole = playingSounds.size === 0 ? 'foreground' : 'background'
+        const savedVolume = trackVolumes[soundId] ?? 0.5
+        const vol =
+          role === 'background' ? Math.min(savedVolume, DEFAULT_BACKGROUND_VOLUME) : savedVolume
+        if (vol !== savedVolume) setTrackVolumes((prev) => ({ ...prev, [soundId]: vol }))
+        await soundEngine.playTrack(soundId, vol, role)
+        setTrackRoles((prev) => ({ ...prev, [soundId]: role }))
         setPlayingSounds((prev) => new Set(prev).add(soundId))
       }
     },
-    [isPaused, playingSounds, trackVolumes],
+    [isPaused, playingSounds, trackRoles, trackVolumes],
   )
 
   // Set track volume
@@ -190,6 +204,36 @@ export function useSoundMixer() {
     setTrackVolumes((prev) => ({ ...prev, [soundId]: clamped }))
     soundEngine.setTrackVolume(soundId, clamped)
   }, [])
+
+  const setRole = useCallback(
+    (soundId: string, role: SoundRole) => {
+      if (!playingSounds.has(soundId) || trackRoles[soundId] === role) return
+
+      setTrackRoles((previous) => {
+        const next = { ...previous }
+        if (role === 'foreground') {
+          for (const [activeId, activeRole] of Object.entries(next)) {
+            if (activeRole === 'foreground') {
+              next[activeId] = 'background'
+              soundEngine.setTrackRole(activeId, 'background')
+            }
+          }
+          next[soundId] = 'foreground'
+          soundEngine.setTrackRole(soundId, 'foreground')
+          return next
+        }
+
+        const replacementId = [...playingSounds].find((activeId) => activeId !== soundId)
+        if (!replacementId) return previous
+        next[soundId] = 'background'
+        next[replacementId] = 'foreground'
+        soundEngine.setTrackRole(soundId, 'background')
+        soundEngine.setTrackRole(replacementId, 'foreground')
+        return next
+      })
+    },
+    [playingSounds, trackRoles],
+  )
 
   // Set master volume
   const setMasterVolume = useCallback((volume: number) => {
@@ -204,6 +248,7 @@ export function useSoundMixer() {
     soundEngine.stopAll()
     setIsPaused(false)
     setPlayingSounds(new Set())
+    setTrackRoles({})
     setIsTimerActive(false)
     setTimerSecondsLeft(null)
     setTimerEndsAt(null)
@@ -250,14 +295,17 @@ export function useSoundMixer() {
       }
       const newPlaying = new Set<string>()
 
-      for (const [soundId, vol] of Object.entries(preset.tracks)) {
-        if (vol > 0) {
-          setVolume(soundId, vol)
-          await soundEngine.playTrack(soundId, vol)
+      const nextRoles: Record<string, SoundRole> = {}
+      for (const [soundId, track] of Object.entries(preset.tracks)) {
+        if (track.volume > 0) {
+          setVolume(soundId, track.volume)
+          await soundEngine.playTrack(soundId, track.volume, track.role)
+          nextRoles[soundId] = track.role
           newPlaying.add(soundId)
         }
       }
 
+      setTrackRoles(nextRoles)
       setPlayingSounds(newPlaying)
     },
     [isPaused, setVolume],
@@ -272,15 +320,23 @@ export function useSoundMixer() {
         setIsPaused(false)
       }
       const newPlaying = new Set<string>()
+      const nextRoles: Record<string, SoundRole> = {}
 
-      for (const [soundId, vol] of Object.entries(tracks)) {
+      for (const [index, [soundId, originalVolume]] of Object.entries(tracks).entries()) {
+        const role: SoundRole = index === 0 ? 'foreground' : 'background'
+        const vol =
+          role === 'background'
+            ? Math.min(originalVolume, DEFAULT_BACKGROUND_VOLUME)
+            : originalVolume
         if (vol > 0) {
           setVolume(soundId, vol)
-          await soundEngine.playTrack(soundId, vol)
+          await soundEngine.playTrack(soundId, vol, role)
+          nextRoles[soundId] = role
           newPlaying.add(soundId)
         }
       }
 
+      setTrackRoles(nextRoles)
       setPlayingSounds(newPlaying)
     },
     [isPaused, setVolume],
@@ -328,9 +384,12 @@ export function useSoundMixer() {
   const saveCurrentPreset = useCallback(
     (name: string, description?: string, icon = '✨') => {
       if (!name.trim() || name.trim().length > 80 || playingSounds.size === 0) return false
-      const activeTracks: Record<string, number> = {}
+      const activeTracks: Record<string, PresetTrack> = {}
       for (const soundId of playingSounds) {
-        activeTracks[soundId] = trackVolumes[soundId] ?? 0.5
+        activeTracks[soundId] = {
+          volume: trackVolumes[soundId] ?? 0.5,
+          role: trackRoles[soundId] ?? 'background',
+        }
       }
 
       try {
@@ -349,7 +408,7 @@ export function useSoundMixer() {
         return false
       }
     },
-    [playingSounds, trackVolumes],
+    [playingSounds, trackRoles, trackVolumes],
   )
 
   const deletePreset = useCallback((presetId: string) => {
@@ -367,6 +426,7 @@ export function useSoundMixer() {
     catalog: SOUND_CATALOG,
     playingSounds,
     trackVolumes,
+    trackRoles,
     masterVolume,
     isAnyPlaying,
     isPaused,
@@ -376,6 +436,7 @@ export function useSoundMixer() {
     toggleSound,
     togglePlayPause,
     setVolume,
+    setRole,
     setMasterVolume,
     stopAll,
     applyPreset,

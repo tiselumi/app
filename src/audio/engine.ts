@@ -1,14 +1,24 @@
 import { SOUND_CATALOG } from './catalog'
 import { createNoiseBuffer } from './noise'
-import type { SoundItem } from './types'
+import type { SoundItem, SoundRole } from './types'
+
+const FOREGROUND_FILTER_FREQUENCY = 20_000
+const BACKGROUND_FILTER_FREQUENCY = 6_000
+const BACKGROUND_REVERB_LEVEL = 0.09
+const ROLE_TRANSITION_SECONDS = 0.18
 
 interface ActiveTrack {
   item: SoundItem
   sourceNode: AudioBufferSourceNode | null
   gainNode: GainNode
+  filterNode: BiquadFilterNode
+  dryGainNode: GainNode
+  convolverNode: ConvolverNode
+  reverbGainNode: GainNode
   buffer: AudioBuffer | null
   isPlaying: boolean
   targetVolume: number
+  role: SoundRole
 }
 
 export class SoundEngine {
@@ -22,6 +32,7 @@ export class SoundEngine {
   private tracks: Map<string, ActiveTrack> = new Map()
   private isMasterMuted = false
   private masterVolume = 0.8
+  private reverbImpulse: AudioBuffer | null = null
 
   private getAudioContext(): AudioContext {
     if (!this.ctx) {
@@ -52,6 +63,29 @@ export class SoundEngine {
     element.preload = 'auto'
     element.setAttribute('playsinline', '')
     return element
+  }
+
+  /**
+   * Build a short room impulse locally for ConvolverNode. Keeping it procedural
+   * avoids another download and gives every background track the same calm space.
+   */
+  private getReverbImpulse(ctx: AudioContext): AudioBuffer {
+    if (this.reverbImpulse) return this.reverbImpulse
+
+    const durationSeconds = 1.25
+    const length = Math.floor(ctx.sampleRate * durationSeconds)
+    const impulse = ctx.createBuffer(2, length, ctx.sampleRate)
+
+    for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+      const samples = impulse.getChannelData(channel)
+      for (let index = 0; index < length; index += 1) {
+        const progress = index / length
+        samples[index] = (Math.random() * 2 - 1) * Math.pow(1 - progress, 3.5)
+      }
+    }
+
+    this.reverbImpulse = impulse
+    return impulse
   }
 
   private startAudioFocusElement(): void {
@@ -109,10 +143,25 @@ export class SoundEngine {
 
     const ctx = this.getAudioContext()
     const gainNode = ctx.createGain()
+    const filterNode = ctx.createBiquadFilter()
+    const dryGainNode = ctx.createGain()
+    const convolverNode = ctx.createConvolver()
+    const reverbGainNode = ctx.createGain()
     gainNode.gain.setValueAtTime(0, ctx.currentTime)
+    filterNode.type = 'lowpass'
+    filterNode.frequency.setValueAtTime(FOREGROUND_FILTER_FREQUENCY, ctx.currentTime)
+    filterNode.Q.setValueAtTime(0.5, ctx.currentTime)
+    dryGainNode.gain.setValueAtTime(1, ctx.currentTime)
+    convolverNode.buffer = this.getReverbImpulse(ctx)
+    reverbGainNode.gain.setValueAtTime(0, ctx.currentTime)
 
+    gainNode.connect(filterNode)
+    filterNode.connect(dryGainNode)
+    filterNode.connect(convolverNode)
+    convolverNode.connect(reverbGainNode)
     if (this.masterGain) {
-      gainNode.connect(this.masterGain)
+      dryGainNode.connect(this.masterGain)
+      reverbGainNode.connect(this.masterGain)
     }
 
     let buffer: AudioBuffer | null = null
@@ -132,16 +181,25 @@ export class SoundEngine {
       item,
       sourceNode: null,
       gainNode,
+      filterNode,
+      dryGainNode,
+      convolverNode,
+      reverbGainNode,
       buffer,
       isPlaying: false,
       targetVolume: 0.6,
+      role: 'foreground',
     }
 
     this.tracks.set(item.id, track)
     return track
   }
 
-  public async playTrack(soundId: string, volume = 0.6): Promise<void> {
+  public async playTrack(
+    soundId: string,
+    volume = 0.6,
+    role: SoundRole = 'foreground',
+  ): Promise<void> {
     const ctx = this.getAudioContext()
     // Chrome for Android grants audio focus and creates a media notification
     // only when an HTML media element participates in the Web Audio graph.
@@ -161,6 +219,7 @@ export class SoundEngine {
     }
 
     track.targetVolume = volume
+    this.applyTrackRole(track, role)
 
     if (!track.isPlaying) {
       const source = ctx.createBufferSource()
@@ -178,6 +237,28 @@ export class SoundEngine {
     track.gainNode.gain.cancelScheduledValues(now)
     track.gainNode.gain.setValueAtTime(track.gainNode.gain.value, now)
     track.gainNode.gain.setTargetAtTime(volume, now, 0.05)
+  }
+
+  private applyTrackRole(track: ActiveTrack, role: SoundRole): void {
+    if (!this.ctx) return
+
+    track.role = role
+    const now = this.ctx.currentTime
+    const cutoff = role === 'background' ? BACKGROUND_FILTER_FREQUENCY : FOREGROUND_FILTER_FREQUENCY
+    const reverbLevel = role === 'background' ? BACKGROUND_REVERB_LEVEL : 0
+
+    track.filterNode.frequency.cancelScheduledValues(now)
+    track.filterNode.frequency.setValueAtTime(track.filterNode.frequency.value, now)
+    track.filterNode.frequency.setTargetAtTime(cutoff, now, ROLE_TRANSITION_SECONDS)
+    track.reverbGainNode.gain.cancelScheduledValues(now)
+    track.reverbGainNode.gain.setValueAtTime(track.reverbGainNode.gain.value, now)
+    track.reverbGainNode.gain.setTargetAtTime(reverbLevel, now, ROLE_TRANSITION_SECONDS)
+  }
+
+  public setTrackRole(soundId: string, role: SoundRole): void {
+    const track = this.tracks.get(soundId)
+    if (!track) return
+    this.applyTrackRole(track, role)
   }
 
   public stopTrack(soundId: string): void {
@@ -305,13 +386,20 @@ export class SoundEngine {
     this.audioFocusGain = null
     this.audioFocusPlayPending = false
 
-    for (const track of this.tracks.values()) track.gainNode.disconnect()
+    for (const track of this.tracks.values()) {
+      track.gainNode.disconnect()
+      track.filterNode.disconnect()
+      track.dryGainNode.disconnect()
+      track.convolverNode.disconnect()
+      track.reverbGainNode.disconnect()
+    }
 
     if (this.ctx) {
       void this.ctx.close()
       this.ctx = null
       this.masterGain = null
       this.timerGain = null
+      this.reverbImpulse = null
     }
     this.tracks.clear()
   }

@@ -264,6 +264,22 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: /Pause mix/i })).not.toBeInTheDocument()
   })
 
+  it('lets the user choose one foreground sound while the others stay in the background', async () => {
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /Deep Calm/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /sounds? playing/i }))
+
+    const brownRole = screen.getByRole('group', { name: /Brown Noise sound role/i })
+    const rainRole = screen.getByRole('group', { name: /Rain on Window sound role/i })
+    expect(brownRole).toHaveTextContent('Foreground')
+    expect(rainRole).toHaveTextContent('Background')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreground', pressed: false }))
+
+    expect(screen.getAllByRole('button', { name: 'Foreground', pressed: true })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Background', pressed: true })).toHaveLength(1)
+  })
+
   it('opens immersive fullscreen while playing and exits on tap', async () => {
     render(<App />)
 
