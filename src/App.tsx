@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import type { SoundFilterCategory } from '@/audio/types'
+import { AuthProvider } from '@/auth/context'
+import { useAuth } from '@/auth/useAuth'
 import { CategoryFilterBar } from '@/components/CategoryFilterBar'
 import { LanguageSwitch } from '@/components/LanguageSwitch'
 import { ImmersiveOverlay } from '@/components/ImmersiveOverlay'
@@ -19,6 +21,7 @@ export const LOCAL_STORAGE_KEY_ONBOARDING_SEEN = 'tiselumi:onboarding_seen_v1'
 
 function AppContent() {
   const { t } = useI18n()
+  const { user } = useAuth()
   const {
     catalog,
     playingSounds,
@@ -28,6 +31,8 @@ function AppContent() {
     isPaused,
     timerSecondsLeft,
     isTimerActive,
+    hasPresetSyncError,
+    isPresetSyncing,
     presets,
     saveCurrentPreset,
     deletePreset,
@@ -41,7 +46,7 @@ function AppContent() {
     applyTracks,
     startSleepTimer,
     cancelSleepTimer,
-  } = useSoundMixer()
+  } = useSoundMixer(user?.id ?? null)
 
   const [activeCategory, setActiveCategory] = useState<SoundFilterCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -172,7 +177,7 @@ function AppContent() {
               onClick={() => setIsLoginModalOpen(true)}
               className="rounded-full border border-[#10231d]/15 bg-white/70 px-3.5 py-1 text-xs font-medium text-[#10231d] shadow-xs backdrop-blur-xs transition-colors hover:border-[#10231d]/30 hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
             >
-              {t.header.loginButton}
+              {user ? t.header.accountButton : t.header.loginButton}
             </button>
             <LanguageSwitch />
           </div>
@@ -308,9 +313,15 @@ function AppContent() {
         activeTracksCount={playingSounds.size}
         onSave={saveCurrentPreset}
         onOpenLogin={() => setIsLoginModalOpen(true)}
+        isSignedIn={Boolean(user)}
       />
 
-      <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        isPresetSyncing={isPresetSyncing}
+        hasPresetSyncError={hasPresetSyncError}
+      />
 
       {/* First-time Welcome Modal */}
       <WelcomeModal
@@ -326,7 +337,9 @@ function AppContent() {
 export function App() {
   return (
     <I18nProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </I18nProvider>
   )
 }
