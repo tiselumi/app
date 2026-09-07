@@ -89,6 +89,7 @@ Do not claim a change is complete when a required check is failing. If a check c
 ## Git and pull requests
 
 - Keep `main` releasable. Work in short-lived branches named `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, or `chore/<topic>`.
+- Keep `main` and `feat/github-actions-pages-deploy` independent because they use different deployment approaches. Transfer shared changes between them only by cherry-picking the required commits; never merge or rebase one branch into the other.
 - Keep commits small and coherent. Separate unrelated changes rather than hiding them in one commit.
 - Use pull requests for review, require CI to pass, and prefer squash merging.
 - Do not force-push, rewrite shared history, or commit directly to protected branches.
