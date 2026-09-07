@@ -5,7 +5,7 @@ This file defines the working agreement for everyone who changes the Tiselumi ap
 ## Product principles
 
 - Tiselumi is a calm, browser-based sound mixer that helps people wind down before sleep.
-- The current MVP is intentionally client-only. Do not add accounts, a backend, AI generation, analytics, payments, or notifications unless the product scope is explicitly changed.
+- The app stays client-first and supports optional Supabase login solely for synchronizing named mixes. Do not add broader backend features, AI generation, analytics, payments, or notifications unless the product scope is explicitly changed.
 - Treat the product as a wellbeing aid, not a medical device. Never promise to diagnose, treat, or cure anxiety, insomnia, or another condition.
 - Favor a quiet, simple experience over feature count. Avoid attention-grabbing patterns, streaks, urgency, and unnecessary notifications.
 - A visitor understands the app within seconds of arriving: one screen offers one obvious next action (pick a mood, press play) with no explanation needed.
