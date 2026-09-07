@@ -5,9 +5,10 @@ import { useI18n } from '@/i18n/useI18n'
 interface SaveMixModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (name: string) => boolean
+  onSave: (name: string) => Promise<boolean>
   activeTracksCount: number
   onOpenLogin: () => void
+  isSignedIn: boolean
 }
 
 export function SaveMixModal({
@@ -16,18 +17,19 @@ export function SaveMixModal({
   activeTracksCount,
   onSave,
   onOpenLogin,
+  isSignedIn,
 }: SaveMixModalProps) {
   const { t } = useI18n()
   const [name, setName] = useState('')
   const [error, setError] = useState(false)
-  const [showNotice, setShowNotice] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Reset notice and handle ESC key
+  // Reset the form and handle ESC key.
   useEffect(() => {
     if (!isOpen) {
-      setShowNotice(false)
       setName('')
       setError(false)
+      setIsSaving(false)
       return
     }
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -43,6 +45,21 @@ export function SaveMixModal({
     activeTracksCount === 1
       ? t.saveModal.featureTracksSingle
       : t.saveModal.featureTracksPlural.replace('{count}', String(activeTracksCount))
+
+  const saveThenOpenLogin = async () => {
+    setIsSaving(true)
+    setError(false)
+    const saved = await onSave(name)
+    setIsSaving(false)
+
+    if (!saved) {
+      setError(true)
+      return
+    }
+
+    onClose()
+    onOpenLogin()
+  }
 
   return (
     <div
@@ -85,12 +102,17 @@ export function SaveMixModal({
           className="mt-5 space-y-3"
           onSubmit={(event) => {
             event.preventDefault()
-            if (onSave(name)) onClose()
-            else setError(true)
+            setIsSaving(true)
+            setError(false)
+            void onSave(name).then((saved) => {
+              setIsSaving(false)
+              if (saved) onClose()
+              else setError(true)
+            })
           }}
         >
           <p id="local-save-notice" className="text-sm text-[#5f746d]">
-            {t.saveModal.localNotice}
+            {isSignedIn ? t.saveModal.cloudNotice : t.saveModal.localNotice}
           </p>
           <label className="block text-sm" htmlFor="mix-name">
             {t.saveModal.nameLabel}
@@ -116,49 +138,36 @@ export function SaveMixModal({
           )}
           <button
             type="submit"
-            disabled={!name.trim() || activeTracksCount === 0}
+            disabled={!name.trim() || activeTracksCount === 0 || isSaving}
             className="w-full rounded-full bg-[#10231d] py-3 text-sm text-white focus-visible:outline-2 disabled:opacity-40"
           >
-            {t.saveModal.saveLocal}
+            {isSaving
+              ? t.saveModal.saving
+              : isSignedIn
+                ? t.saveModal.saveCloud
+                : t.saveModal.saveLocal}
           </button>
         </form>
 
-        {showNotice && (
-          <div
-            role="status"
-            className="mt-4 rounded-xl bg-[#dfe9df] p-3 text-center text-xs font-medium text-[#10231d]"
-          >
-            {t.saveModal.comingSoonNotice}
+        {!isSignedIn && (
+          <div className="mt-6 flex flex-col gap-2.5">
+            <button
+              type="button"
+              disabled={!name.trim() || activeTracksCount === 0 || isSaving}
+              onClick={() => void saveThenOpenLogin()}
+              className="flex w-full items-center justify-center rounded-full bg-[#10231d] py-3 text-sm font-medium text-white shadow-md transition-all hover:bg-[#1a382f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
+            >
+              {isSaving ? t.saveModal.saving : t.saveModal.createAccount}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-1 text-center text-xs text-[#5f746d] underline-offset-4 hover:text-[#10231d] hover:underline"
+            >
+              {t.saveModal.continueGuest}
+            </button>
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="mt-6 flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={() => setShowNotice(true)}
-            className="flex w-full items-center justify-center rounded-full bg-[#10231d] py-3 text-sm font-medium text-white shadow-md transition-all hover:bg-[#1a382f] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
-          >
-            {t.saveModal.createAccount}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onClose()
-              onOpenLogin()
-            }}
-            className="flex w-full items-center justify-center rounded-full border border-[#10231d]/20 bg-white/80 py-2.5 text-sm font-medium text-[#10231d] transition-all hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10231d]"
-          >
-            {t.saveModal.login}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="mt-1 text-center text-xs text-[#5f746d] underline-offset-4 hover:text-[#10231d] hover:underline"
-          >
-            {t.saveModal.continueGuest}
-          </button>
-        </div>
 
         <p className="mt-4 text-center text-[11px] text-[#5f746d]/80">{t.saveModal.guestNotice}</p>
       </div>

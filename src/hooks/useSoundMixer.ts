@@ -3,8 +3,19 @@ import { useCallback, useEffect, useState } from 'react'
 import { SOUND_CATALOG } from '@/audio/catalog'
 import { soundEngine } from '@/audio/engine'
 import { clearMediaSession, connectMediaSession } from '@/audio/mediaSession'
-import { PRESETS_KEY, createPresetId, readPresets } from '@/audio/presetStorage'
+import {
+  clearGuestPresets,
+  createPresetId,
+  getPresetsKey,
+  readCustomPresets,
+  writeCustomPresets,
+} from '@/audio/presetStorage'
 import type { Preset, PresetTrack, SoundRole } from '@/audio/types'
+import {
+  readCloudPresetSnapshot,
+  removeCloudPreset,
+  saveCloudPreset,
+} from '@/presets/cloudPresetStorage'
 
 const LOCAL_STORAGE_KEY_VOLUMES = 'tiselumi:sound_volumes_v2'
 const DEFAULT_BACKGROUND_VOLUME = 0.3
@@ -75,7 +86,15 @@ export const DEFAULT_PRESETS: Preset[] = [
   },
 ]
 
-export function useSoundMixer() {
+function mergePresets(...collections: Preset[][]): Preset[] {
+  const merged = new Map<string, Preset>()
+  for (const presets of collections) {
+    for (const preset of presets) merged.set(preset.id, preset)
+  }
+  return [...merged.values()]
+}
+
+export function useSoundMixer(userId: string | null = null) {
   // Track volume map: soundId -> volume (0 to 1)
   const [trackVolumes, setTrackVolumes] = useState<Record<string, number>>(() => {
     try {
@@ -106,15 +125,18 @@ export function useSoundMixer() {
   const [timerEndsAt, setTimerEndsAt] = useState<number | null>(null)
   const [isTimerActive, setIsTimerActive] = useState(false)
 
-  // Presets
-  const [presets, setPresets] = useState<Preset[]>(() => {
+  // User-created presets are kept separate from curated defaults.
+  const [customPresets, setCustomPresets] = useState<Preset[]>(() => {
     try {
-      return readPresets(DEFAULT_PRESETS)
+      return readCustomPresets(userId)
     } catch {
       // Fallback
     }
-    return DEFAULT_PRESETS
+    return []
   })
+  const [isPresetSyncing, setIsPresetSyncing] = useState(false)
+  const [hasPresetSyncError, setHasPresetSyncError] = useState(false)
+  const presets = [...DEFAULT_PRESETS, ...customPresets]
 
   // Save volumes on change
   useEffect(() => {
@@ -126,17 +148,70 @@ export function useSoundMixer() {
   }, [trackVolumes])
 
   useEffect(() => {
-    const refresh = (event: StorageEvent) => {
-      if (event.key !== PRESETS_KEY && event.key !== null) return
+    let cancelled = false
+
+    const loadPresets = async () => {
+      let cached: Preset[] = []
       try {
-        setPresets(readPresets(DEFAULT_PRESETS))
+        cached = readCustomPresets(userId)
+        if (!cancelled) setCustomPresets(cached)
+      } catch {
+        if (!cancelled) setCustomPresets([])
+      }
+
+      if (!userId) {
+        if (!cancelled) {
+          setIsPresetSyncing(false)
+          setHasPresetSyncError(false)
+        }
+        return
+      }
+
+      if (!cancelled) {
+        setIsPresetSyncing(true)
+        setHasPresetSyncError(false)
+      }
+
+      try {
+        const guestPresets = readCustomPresets(null)
+        const { presets: cloudPresets, deletedPresetIds } = await readCloudPresetSnapshot()
+        const cloudIds = new Set(cloudPresets.map((preset) => preset.id))
+        const liveCached = cached.filter((preset) => !deletedPresetIds.has(preset.id))
+        const liveGuestPresets = guestPresets.filter((preset) => !deletedPresetIds.has(preset.id))
+        const pendingUploads = mergePresets(liveCached, liveGuestPresets).filter(
+          (preset) => !cloudIds.has(preset.id) && !deletedPresetIds.has(preset.id),
+        )
+        await Promise.all(pendingUploads.map((preset) => saveCloudPreset(userId, preset)))
+
+        const merged = mergePresets(cloudPresets, liveCached, liveGuestPresets)
+        writeCustomPresets(userId, merged)
+        if (guestPresets.length > 0) clearGuestPresets()
+        if (!cancelled) setCustomPresets(merged)
+      } catch {
+        if (!cancelled) setHasPresetSyncError(true)
+      } finally {
+        if (!cancelled) setIsPresetSyncing(false)
+      }
+    }
+
+    void loadPresets()
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+
+  useEffect(() => {
+    const refresh = (event: StorageEvent) => {
+      if (event.key !== getPresetsKey(userId) && event.key !== null) return
+      try {
+        setCustomPresets(readCustomPresets(userId))
       } catch {
         /* Keep current mixes */
       }
     }
     window.addEventListener('storage', refresh)
     return () => window.removeEventListener('storage', refresh)
-  }, [])
+  }, [userId])
 
   const pauseAll = useCallback(async () => {
     if (playingSounds.size === 0 || isPaused) return
@@ -382,7 +457,7 @@ export function useSoundMixer() {
   const isAnyPlaying = playingSounds.size > 0
 
   const saveCurrentPreset = useCallback(
-    (name: string, description?: string, icon = '✨') => {
+    async (name: string, description?: string, icon = '✨') => {
       if (!name.trim() || name.trim().length > 80 || playingSounds.size === 0) return false
       const activeTracks: Record<string, PresetTrack> = {}
       for (const soundId of playingSounds) {
@@ -392,35 +467,46 @@ export function useSoundMixer() {
         }
       }
 
+      const newPreset: Preset = {
+        id: createPresetId(),
+        name: name.trim(),
+        icon,
+        description,
+        tracks: activeTracks,
+      }
+
       try {
-        const newPreset: Preset = {
-          id: createPresetId(),
-          name: name.trim(),
-          icon,
-          description,
-          tracks: activeTracks,
-        }
-        const next = [...readPresets(DEFAULT_PRESETS), newPreset]
-        localStorage.setItem(PRESETS_KEY, JSON.stringify(next))
-        setPresets(next)
+        if (userId) await saveCloudPreset(userId, newPreset)
+        const next = [...customPresets, newPreset]
+        writeCustomPresets(userId, next)
+        setCustomPresets(next)
+        setHasPresetSyncError(false)
         return true
       } catch {
+        if (userId) setHasPresetSyncError(true)
         return false
       }
     },
-    [playingSounds, trackRoles, trackVolumes],
+    [customPresets, playingSounds, trackRoles, trackVolumes, userId],
   )
 
-  const deletePreset = useCallback((presetId: string) => {
-    try {
-      const next = readPresets(DEFAULT_PRESETS).filter((p) => p.id !== presetId)
-      localStorage.setItem(PRESETS_KEY, JSON.stringify(next))
-      setPresets(next)
-      return true
-    } catch {
-      return false
-    }
-  }, [])
+  const deletePreset = useCallback(
+    async (presetId: string) => {
+      if (!presetId.startsWith('preset-')) return false
+      try {
+        if (userId) await removeCloudPreset(presetId)
+        const next = customPresets.filter((preset) => preset.id !== presetId)
+        writeCustomPresets(userId, next)
+        setCustomPresets(next)
+        setHasPresetSyncError(false)
+        return true
+      } catch {
+        if (userId) setHasPresetSyncError(true)
+        return false
+      }
+    },
+    [customPresets, userId],
+  )
 
   return {
     catalog: SOUND_CATALOG,
@@ -432,6 +518,8 @@ export function useSoundMixer() {
     isPaused,
     timerSecondsLeft,
     isTimerActive,
+    isPresetSyncing,
+    hasPresetSyncError,
     presets,
     toggleSound,
     togglePlayPause,

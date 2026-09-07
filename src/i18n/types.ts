@@ -6,6 +6,7 @@ export interface TranslationSchema {
     title: string
     quickMixes: string
     loginButton: string
+    accountButton: string
   }
   soundSection: {
     title: string
@@ -100,11 +101,14 @@ export interface TranslationSchema {
   }
   saveModal: {
     localNotice: string
+    cloudNotice: string
     nameLabel: string
     emptyMix: string
     storageError: string
     saveLocal: string
-    deleteMix: string
+    saveCloud: string
+    saving: string
+    removeMix: string
     saveMixButton: string
     title: string
     subtitle: string
@@ -132,6 +136,16 @@ export interface TranslationSchema {
     title: string
     subtitle: string
     continueGuest: string
+    continueGoogle: string
+    connecting: string
+    notConfigured: string
+    accountTitle: string
+    account: string
+    signedInAs: string
+    syncNotice: string
+    syncing: string
+    syncError: string
+    signOut: string
     close: string
   }
   language: {

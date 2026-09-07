@@ -3,13 +3,14 @@ import type { Preset } from '@/audio/types'
 import { useI18n } from '@/i18n/useI18n'
 
 interface PresetsBarProps {
-  onDeletePreset: (id: string) => boolean
+  onDeletePreset: (id: string) => Promise<boolean>
   presets: Preset[]
   onSelectPreset: (preset: Preset) => void
 }
 
 export function PresetsBar({ presets, onSelectPreset, onDeletePreset }: PresetsBarProps) {
   const [error, setError] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const { t } = useI18n()
 
   if (presets.length === 0) return null
@@ -45,8 +46,16 @@ export function PresetsBar({ presets, onSelectPreset, onDeletePreset }: PresetsB
               {preset.id.startsWith('preset-') && (
                 <button
                   type="button"
-                  aria-label={`${t.saveModal.deleteMix}: ${name}`}
-                  onClick={() => setError(!onDeletePreset(preset.id))}
+                  aria-label={`${t.saveModal.removeMix}: ${name}`}
+                  title={`${t.saveModal.removeMix}: ${name}`}
+                  disabled={deletingId === preset.id}
+                  onClick={() => {
+                    setDeletingId(preset.id)
+                    void onDeletePreset(preset.id).then((deleted) => {
+                      setError(!deleted)
+                      setDeletingId(null)
+                    })
+                  }}
                   className="rounded-full p-2 text-sm focus-visible:outline-2"
                 >
                   ×

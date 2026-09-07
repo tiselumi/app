@@ -1,7 +1,9 @@
 import { SOUND_CATALOG } from '@/audio/catalog'
 import type { Preset, PresetTrack, SoundRole } from '@/audio/types'
 
-export const PRESETS_KEY = 'tiselumi:custom_presets_v2'
+export const LEGACY_PRESETS_KEY = 'tiselumi:custom_presets_v2'
+export const GUEST_PRESETS_KEY = 'tiselumi:custom_presets_v3:guest'
+const USER_PRESETS_KEY_PREFIX = 'tiselumi:custom_presets_v3:user:'
 const soundIds = new Set(SOUND_CATALOG.map((sound) => sound.id))
 
 export function createPresetId(): string {
@@ -40,17 +42,19 @@ function normalizeTrack(value: unknown, role: SoundRole): PresetTrack | null {
   return { volume: track.volume, role: track.role }
 }
 
-function normalizePreset(value: unknown): Preset | null {
+export function normalizePreset(value: unknown): Preset | null {
   if (!value || typeof value !== 'object') return null
   const p = value as Record<string, unknown>
   if (
     typeof p.id !== 'string' ||
     p.id.length === 0 ||
+    p.id.length > 100 ||
     typeof p.name !== 'string' ||
     p.name.trim().length === 0 ||
     p.name.length > 80 ||
-    (p.description !== undefined && typeof p.description !== 'string') ||
-    (p.icon !== undefined && typeof p.icon !== 'string') ||
+    (p.description !== undefined &&
+      (typeof p.description !== 'string' || p.description.length > 280)) ||
+    (p.icon !== undefined && (typeof p.icon !== 'string' || p.icon.length > 16)) ||
     !p.tracks ||
     typeof p.tracks !== 'object' ||
     Array.isArray(p.tracks)
@@ -82,23 +86,22 @@ function normalizePreset(value: unknown): Preset | null {
 
   return {
     id: p.id,
-    name: p.name,
+    name: p.name.trim(),
     description: typeof p.description === 'string' ? p.description : undefined,
     icon: typeof p.icon === 'string' ? p.icon : undefined,
     tracks,
   }
 }
 
-export function readPresets(fallback: Preset[]): Preset[] {
-  const raw = localStorage.getItem(PRESETS_KEY)
-  if (raw === null) return fallback
+function parsePresets(raw: string | null): Preset[] {
+  if (raw === null) return []
   let data: unknown
   try {
     data = JSON.parse(raw)
   } catch {
-    return fallback
+    return []
   }
-  if (!Array.isArray(data)) return fallback
+  if (!Array.isArray(data)) return []
   const seen = new Set<string>()
   return data
     .flatMap((value) => {
@@ -110,4 +113,38 @@ export function readPresets(fallback: Preset[]): Preset[] {
       seen.add(preset.id)
       return true
     })
+}
+
+export function getPresetsKey(userId: string | null): string {
+  return userId ? `${USER_PRESETS_KEY_PREFIX}${userId}` : GUEST_PRESETS_KEY
+}
+
+export function readCustomPresets(userId: string | null): Preset[] {
+  const key = getPresetsKey(userId)
+  const current = localStorage.getItem(key)
+  if (current !== null)
+    return parsePresets(current).filter((preset) => preset.id.startsWith('preset-'))
+
+  if (userId !== null) return []
+
+  const legacy = parsePresets(localStorage.getItem(LEGACY_PRESETS_KEY)).filter((preset) =>
+    preset.id.startsWith('preset-'),
+  )
+  if (legacy.length > 0) writeCustomPresets(null, legacy)
+  return legacy
+}
+
+export function writeCustomPresets(userId: string | null, presets: Preset[]): void {
+  localStorage.setItem(getPresetsKey(userId), JSON.stringify(presets))
+}
+
+export function clearGuestPresets(): void {
+  localStorage.removeItem(GUEST_PRESETS_KEY)
+  localStorage.removeItem(LEGACY_PRESETS_KEY)
+}
+
+/** @deprecated Use readCustomPresets for account-aware storage. */
+export function readPresets(fallback: Preset[]): Preset[] {
+  const presets = parsePresets(localStorage.getItem(LEGACY_PRESETS_KEY))
+  return presets.length > 0 ? presets : fallback
 }
