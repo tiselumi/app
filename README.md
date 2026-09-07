@@ -8,8 +8,10 @@ Tiselumi is a calm sound mixer for people who need help winding down before slee
 - A simple mixer with independent volume controls.
 - Background playback with system play, pause, and stop controls when supported by the browser.
 - Sleep timer and gentle fade-out.
-- Saved preferences and named soundscapes stored locally in the browser. Guest mixes include selected sounds and their volumes; delete them using the × button beside a saved mix. No data is sent to a server. Mixes remain until deleted or browser site data is cleared; private browsing may discard them at the end of the session.
-- No accounts, backend, AI generation, analytics, or medical claims.
+- Saved preferences and named soundscapes stored locally in the browser for guests.
+- Optional Google account login and Supabase synchronization for named soundscapes. Guest mixes are moved into the account after the first successful login.
+- Removed account soundscapes use soft deletion so synchronized devices retain a deletion tombstone and do not restore stale cached copies.
+- No AI generation, analytics, payments, notifications, or medical claims.
 
 ## Tech stack
 
@@ -22,7 +24,8 @@ Tiselumi is a calm sound mixer for people who need help winding down before slee
 
 ## Getting started
 
-Requirements: Node.js 24 or newer and npm 11.
+Requirements: Node.js 24 or newer and npm 11. Copy `.env.example` to `.env.local` and add
+your Supabase project URL and publishable key to enable account login.
 
 ```bash
 npm ci
@@ -45,7 +48,27 @@ Open the local address printed by Vite.
 
 ## Deployment
 
-For Cloudflare Pages, use `npm run build` as the build command and `dist` as the output directory. No runtime environment variables are required for the initial MVP.
+For Cloudflare Pages, use `npm run build` as the build command and `dist` as the output directory.
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as build environment variables.
+
+## Supabase setup
+
+The repository contains a local Supabase configuration and a migration for the `mixes` table.
+Link it to an existing Supabase project and push the migration when you are ready:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <project-ref>
+npx supabase db push
+```
+
+In the Supabase dashboard, enable the Google auth provider and add the production site URL plus
+the local development URL to the allowed redirect URLs. Keep the service-role key out of the app;
+the browser uses only the publishable key and database access is protected by Row Level Security.
+
+For a GitHub Pages deployment at `https://tiselumi.github.io/app/`, use
+`https://tiselumi.github.io` as Google's authorized JavaScript origin and the full
+`https://tiselumi.github.io/app/` URL in Supabase's Site URL and redirect allow list.
 
 ## Contributing
 
