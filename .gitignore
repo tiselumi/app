@@ -13,6 +13,7 @@ dist-ssr
 coverage
 .vite
 .wrangler
+supabase/.temp
 *.local
 
 # Local environment variables
