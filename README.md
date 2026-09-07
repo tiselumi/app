@@ -51,6 +51,10 @@ Open the local address printed by Vite.
 For Cloudflare Pages, use `npm run build` as the build command and `dist` as the output directory.
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as build environment variables.
 
+`main` and `feat/github-actions-pages-deploy` intentionally use different deployment approaches.
+Keep their histories independent: transfer shared changes between them only by cherry-picking the
+required commits. Never merge or rebase one of these branches into the other.
+
 ## Supabase setup
 
 The repository contains a local Supabase configuration and a migration for the `mixes` table.
