@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { App } from './App'
@@ -43,10 +43,11 @@ describe('App', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('Log in')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Mix name')).not.toBeInTheDocument()
   })
 
-  it('saves guest mixes across reloads and deletes them persistently', async () => {
+  it('saves guest mixes across reloads and removes them persistently', async () => {
     const view = render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Deep Calm/i }))
     await screen.findByRole('button', { name: /Pause mix/i })
@@ -54,12 +55,13 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Save mix/i }))
     fireEvent.change(screen.getByLabelText('Mix name'), { target: { value: 'My evening' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save in this browser' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     view.unmount()
     const reload = render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /✨\s*My evening/ }))
     expect(await screen.findByRole('button', { name: /Pause mix/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Delete mix: My evening' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove saved soundscape: My evening' }))
+    await waitFor(() => expect(screen.queryByText('My evening')).not.toBeInTheDocument())
     reload.unmount()
     render(<App />)
     expect(screen.queryByText('My evening')).not.toBeInTheDocument()
@@ -76,11 +78,11 @@ describe('App', () => {
       throw new Error('quota')
     })
     fireEvent.click(screen.getByRole('button', { name: 'Save in this browser' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not save')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save')
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     write.mockRestore()
     fireEvent.click(screen.getByRole('button', { name: 'Save in this browser' }))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
   it('ignores malformed stored presets', () => {
@@ -197,6 +199,21 @@ describe('App', () => {
     fireEvent.click(continueBtn)
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('saves a guest soundscape before opening account sync', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Deep Calm/i }))
+    await screen.findByRole('button', { name: /Pause mix/i })
+    fireEvent.click(screen.getByRole('button', { name: /sounds? playing/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /Save mix/i }))
+    fireEvent.change(screen.getByLabelText('Mix name'), { target: { value: 'Sync me' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sync with a Free Account' }))
+
+    expect(await screen.findByText('Log in')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument()
+    expect(localStorage.getItem('tiselumi:custom_presets_v3:guest')).toContain('Sync me')
   })
 
   it('renders localized modal text in Russian and recovers from corrupted history', async () => {
