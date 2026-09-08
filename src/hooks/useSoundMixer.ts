@@ -16,6 +16,7 @@ import {
   removeCloudPreset,
   saveCloudPreset,
 } from '@/presets/cloudPresetStorage'
+import { subscribeToCloudPresetChanges } from '@/presets/realtimePresetSync'
 
 const LOCAL_STORAGE_KEY_VOLUMES = 'tiselumi:sound_volumes_v2'
 const DEFAULT_BACKGROUND_VOLUME = 0.3
@@ -94,6 +95,26 @@ function mergePresets(...collections: Preset[][]): Preset[] {
   return [...merged.values()]
 }
 
+async function synchronizeUserPresets(userId: string): Promise<Preset[]> {
+  const cached = readCustomPresets(userId)
+  const guestPresets = readCustomPresets(null)
+  const { presets: cloudPresets, deletedPresetIds } = await readCloudPresetSnapshot()
+  const cloudIds = new Set(cloudPresets.map((preset) => preset.id))
+  const liveCached = cached.filter((preset) => !deletedPresetIds.has(preset.id))
+  const liveGuestPresets = guestPresets.filter((preset) => !deletedPresetIds.has(preset.id))
+  const pendingUploads = mergePresets(liveCached, liveGuestPresets).filter(
+    (preset) => !cloudIds.has(preset.id) && !deletedPresetIds.has(preset.id),
+  )
+
+  await Promise.all(pendingUploads.map((preset) => saveCloudPreset(userId, preset)))
+
+  // The cloud is authoritative for IDs that exist both remotely and in the local cache.
+  const merged = mergePresets(liveCached, liveGuestPresets, cloudPresets)
+  writeCustomPresets(userId, merged)
+  if (guestPresets.length > 0) clearGuestPresets()
+  return merged
+}
+
 export function useSoundMixer(userId: string | null = null) {
   // Track volume map: soundId -> volume (0 to 1)
   const [trackVolumes, setTrackVolumes] = useState<Record<string, number>>(() => {
@@ -149,54 +170,60 @@ export function useSoundMixer(userId: string | null = null) {
 
   useEffect(() => {
     let cancelled = false
+    let isRefreshing = false
+    let refreshQueued = false
 
-    const loadPresets = async () => {
-      let cached: Preset[] = []
+    const loadCachedPresets = () => {
       try {
-        cached = readCustomPresets(userId)
-        if (!cancelled) setCustomPresets(cached)
+        setCustomPresets(readCustomPresets(userId))
       } catch {
-        if (!cancelled) setCustomPresets([])
-      }
-
-      if (!userId) {
-        if (!cancelled) {
-          setIsPresetSyncing(false)
-          setHasPresetSyncError(false)
-        }
-        return
-      }
-
-      if (!cancelled) {
-        setIsPresetSyncing(true)
-        setHasPresetSyncError(false)
-      }
-
-      try {
-        const guestPresets = readCustomPresets(null)
-        const { presets: cloudPresets, deletedPresetIds } = await readCloudPresetSnapshot()
-        const cloudIds = new Set(cloudPresets.map((preset) => preset.id))
-        const liveCached = cached.filter((preset) => !deletedPresetIds.has(preset.id))
-        const liveGuestPresets = guestPresets.filter((preset) => !deletedPresetIds.has(preset.id))
-        const pendingUploads = mergePresets(liveCached, liveGuestPresets).filter(
-          (preset) => !cloudIds.has(preset.id) && !deletedPresetIds.has(preset.id),
-        )
-        await Promise.all(pendingUploads.map((preset) => saveCloudPreset(userId, preset)))
-
-        const merged = mergePresets(cloudPresets, liveCached, liveGuestPresets)
-        writeCustomPresets(userId, merged)
-        if (guestPresets.length > 0) clearGuestPresets()
-        if (!cancelled) setCustomPresets(merged)
-      } catch {
-        if (!cancelled) setHasPresetSyncError(true)
-      } finally {
-        if (!cancelled) setIsPresetSyncing(false)
+        setCustomPresets([])
       }
     }
 
-    void loadPresets()
+    loadCachedPresets()
+
+    if (!userId) {
+      setIsPresetSyncing(false)
+      setHasPresetSyncError(false)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const refreshPresets = async () => {
+      if (isRefreshing) {
+        refreshQueued = true
+        return
+      }
+
+      isRefreshing = true
+      setIsPresetSyncing(true)
+      setHasPresetSyncError(false)
+
+      do {
+        refreshQueued = false
+        try {
+          const merged = await synchronizeUserPresets(userId)
+          if (!cancelled) {
+            setCustomPresets(merged)
+            setHasPresetSyncError(false)
+          }
+        } catch {
+          if (!cancelled) setHasPresetSyncError(true)
+        }
+      } while (!cancelled && refreshQueued)
+
+      isRefreshing = false
+      if (!cancelled) setIsPresetSyncing(false)
+    }
+
+    void refreshPresets()
+    const unsubscribe = subscribeToCloudPresetChanges(userId, () => void refreshPresets())
+
     return () => {
       cancelled = true
+      unsubscribe()
     }
   }, [userId])
 
